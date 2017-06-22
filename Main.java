@@ -10,6 +10,8 @@ import javafx.event.ActionEvent;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.util.Duration;
+import javafx.scene.control.Slider;
+
 
 public class Main extends Application
 {
@@ -32,7 +34,7 @@ public class Main extends Application
             mediaPlayer = getMediaPlayer("foobar.wav");
             mediaPlayer.play();
         }
-        else if (mediaPlayer.getStatus() == MediaPlayer.Status.PAUSED) // has been played before, but is paued. should be played at time
+        else if (mediaPlayer.getStatus() == MediaPlayer.Status.PAUSED) // has been played before, but is paused. should be played at time
         {
             Duration skipTo = new Duration(unixTimeWhenPaused - unixTimeWhenFirstPlayed);
             mediaPlayer.seek(skipTo);
@@ -43,6 +45,12 @@ public class Main extends Application
             unixTimeWhenPaused = System.currentTimeMillis(); // saving where it was up to
             mediaPlayer.pause();
         }
+    }
+
+    public static void stopPlayer()
+    {
+        mediaPlayer.pause();
+        mediaPlayer = null;
     }
 
     @Override
@@ -59,11 +67,23 @@ public class Main extends Application
         grid.setVgap(5);
         grid.setHgap(5);
 
-        // defining play button -- will play a given wav file
-        Button playBtn = new Button("Play!");
-        playBtn.setOnAction((ActionEvent ae) -> playPause());
-        GridPane.setConstraints(playBtn, 0, 0);
-        grid.getChildren().add(playBtn);
+        // defining play/pause button -- will play a given wav file
+        final Button playPauseBtn = new Button("Play/Pause!");
+        playPauseBtn.setOnAction((ActionEvent ae) -> playPause());
+        GridPane.setConstraints(playPauseBtn, 0, 0);
+        grid.getChildren().add(playPauseBtn);
+
+        // defining stop button
+        final Button stopBtn = new Button("Stop!");
+        stopBtn.setOnAction((ActionEvent ae) -> stopPlayer());
+        GridPane.setConstraints(stopBtn, 1, 0);
+        grid.getChildren().add(stopBtn);
+
+        // defining slider
+        final Slider slider = new Slider(0, 100, 0);
+        slider.setBlockIncrement(1);
+        GridPane.setConstraints(slider, 1, 0);
+        grid.getChildren().add(slider);
 
         // finally making stage visible
         stage.setScene(new Scene(grid, 300, 300));
