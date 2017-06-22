@@ -13,7 +13,7 @@ import javafx.scene.media.MediaPlayer;
 public class Main extends Application
 {
 
-    public static MediaPlayer mediaPlayer;
+    public static MediaPlayer mediaPlayer = null;
 
     public static MediaPlayer getMediaPlayer(String fileName)
     {
@@ -39,12 +39,12 @@ public class Main extends Application
         // defining play button -- will play a given wav file
         Button playBtn = new Button("Play!");
         playBtn.setOnAction((ActionEvent ae) -> {
-            if (mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING)
+            if (mediaPlayer == null || mediaPlayer.getStatus() == MediaPlayer.Status.PAUSED) // if nothing is playing -- either because this is the first time, or because it's paused
             {
                 mediaPlayer = getMediaPlayer("foobar.wav"); // using wav file because mp3s are not supported on ubuntu 16
                 mediaPlayer.play();
             }
-            else if (mediaPlayer.getStatus() == MediaPlayer.Status.PAUSED)
+            else if (mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING) // if it's playing something
             {
                 mediaPlayer.pause();
             }
@@ -52,10 +52,6 @@ public class Main extends Application
         });
         GridPane.setConstraints(playBtn, 0, 0);
         grid.getChildren().add(playBtn);
-
-        // defining pause button -- will stop the currently playing wav
-        Button stopBtn = new Button("Pause!");
-        stopBtn.setOnAction((ActionEvent ae) -> );
 
         // finally making stage visible
         stage.setScene(new Scene(grid, 300, 300));
