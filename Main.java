@@ -22,7 +22,7 @@ public class Main extends Application
     private static MediaPlayer mediaPlayer = null;
     private static long unixTimeWhenFirstPlayed, unixTimeWhenPaused;
     private static final String absPrefix = System.getProperty("user.dir").replace('\\', '/') + "/MusicFiles";
-    private static ListView<File> trackNames = new ListView<>();
+    private static ListView<String> trackNames = new ListView<>();
 
     public static MediaPlayer getMediaPlayer(String fileName)
     {
@@ -105,9 +105,11 @@ public class Main extends Application
         {
             if (file.isFile() && ( file.getName().contains(".mp3") || file.getName().contains(".wav") ))
             {
-                trackNames.getItems().add(file);
+                trackNames.getItems().add(file.getName());
             }
         }
+        GridPane.setConstraints(trackNames, 3, 0, 5, 10);
+        grid.getChildren().add(trackNames);
 
         // finally making stage visible
         stage.setScene(new Scene(grid, 300, 300));
