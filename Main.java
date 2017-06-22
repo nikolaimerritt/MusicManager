@@ -16,6 +16,8 @@ import java.io.File;
 public class Main
 {
 
+    public static MediaPlayer currentlyPlaying;
+
     public static MediaPlayer getMediaPlayer(String location)
     {
         Media media = new Media(new File(location).toURI().toString());
@@ -37,7 +39,10 @@ public class Main
 
         // defining play button -- will play a preset MP3 file
         Button playBtn = new Button("Play!");
-        playBtn.setOnAction((ActionEvent ae) -> getMediaPlayer("/Users/seraph/Downloads/TestMP3.mp3").play());
+        playBtn.setOnAction((ActionEvent ae) -> {
+            currentlyPlaying = getMediaPlayer("/Users/seraph/Downloads/TestMP3.mp3");
+            currentlyPlaying.play();
+        });
         GridPane.setConstraints(playBtn, 0, 0);
         grid.getChildren().add(playBtn);
 
