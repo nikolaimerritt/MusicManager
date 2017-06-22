@@ -3,9 +3,11 @@ package sample;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.ListView;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.scene.control.Button;
@@ -108,6 +110,11 @@ public class Main extends Application
                 trackNames.getItems().add(file.getName());
             }
         }
+        trackNames.setOnMouseClicked(event -> {
+            if (mediaPlayer != null) { stopPlayer(); }
+            mediaPlayer = getMediaPlayer(trackNames.getSelectionModel().getSelectedItem());
+            mediaPlayer.play();
+        });
         GridPane.setConstraints(trackNames, 3, 0, 5, 10);
         grid.getChildren().add(trackNames);
 
