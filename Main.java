@@ -5,6 +5,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
+import javafx.scene.control.ListView;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.scene.control.Button;
@@ -13,18 +14,20 @@ import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.util.Duration;
 import javafx.scene.control.Slider;
-
+import java.io.File;
 
 public class Main extends Application
 {
 
     private static MediaPlayer mediaPlayer = null;
     private static long unixTimeWhenFirstPlayed, unixTimeWhenPaused;
+    private static final String absPrefix = System.getProperty("user.dir").replace('\\', '/') + "/MusicFiles";
+    private static ListView<File> trackNames = new ListView<>();
 
     public static MediaPlayer getMediaPlayer(String fileName)
     {
         System.out.println(System.getProperty("user.dir"));
-        Media media = new Media("file:///" + System.getProperty("user.dir").replace('\\', '/') + "/" + fileName);
+        Media media = new Media("file://" + absPrefix + "/" + fileName);
         return new MediaPlayer(media);
     }
 
@@ -33,7 +36,7 @@ public class Main extends Application
         if (mediaPlayer == null) // playing for first time. should be played
         {
             unixTimeWhenFirstPlayed = System.currentTimeMillis();
-            mediaPlayer = getMediaPlayer("foobar.wav");
+            mediaPlayer = getMediaPlayer("CodingDude.wav");
             mediaPlayer.play();
         }
         else if (mediaPlayer.getStatus() == MediaPlayer.Status.PAUSED) // has been played before, but is paused. should be played at time
@@ -95,6 +98,16 @@ public class Main extends Application
         });
         GridPane.setConstraints(slider, 0, 1, 2, 1);
         grid.getChildren().add(slider);
+
+        // defining listview of wav files that can be played
+        File[] files = new File(absPrefix).listFiles();
+        for (File file : files)
+        {
+            if (file.isFile() && ( file.getName().contains(".mp3") || file.getName().contains(".wav") ))
+            {
+                trackNames.getItems().add(file);
+            }
+        }
 
         // finally making stage visible
         stage.setScene(new Scene(grid, 300, 300));
