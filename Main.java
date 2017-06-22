@@ -30,7 +30,8 @@ import javax.sound.sampled.*;
 public class Main extends Application
 {
 
-    private static MediaPlayer mediaPlayer = null;
+    // private static MediaPlayer mediaPlayer = null;
+    private static Clip currentClip = null;
     private static long unixTimeWhenFirstPlayed, unixTimeWhenPaused;
     private static final String absPrefix = System.getProperty("user.dir").replace('\\', '/') + "/MusicFiles";
     private static ListView<String> trackNames = new ListView<>();
@@ -42,34 +43,31 @@ public class Main extends Application
     }
 
     public static void playPause() throws IOException, UnsupportedAudioFileException, LineUnavailableException {
-        if (mediaPlayer == null) // playing for first time. should be played
+        if (currentClip == null) // playing for first time. should be played
         {
-            unixTimeWhenFirstPlayed = System.currentTimeMillis();
+            System.out.println("Playing for first time");
             URL url = new URL("http://musicmanager.duckdns.org/CodingDude.wav");
-            Clip clip = AudioSystem.getClip();
+            currentClip = AudioSystem.getClip();
             AudioInputStream ais = AudioSystem.getAudioInputStream(url);
-            clip.open(ais);
-            clip.start();
-            /* mediaPlayer = getMediaPlayer("CodingDude.wav");
-            mediaPlayer.play(); */
+            currentClip.open(ais);
+            currentClip.start();
         }
-        else if (mediaPlayer.getStatus() == MediaPlayer.Status.PAUSED) // has been played before, but is paused. should be played at time
+        else if (currentClip != null && !currentClip.isActive()) // has been played before, but is paused. should be played at time
         {
-            Duration skipTo = new Duration(unixTimeWhenPaused - unixTimeWhenFirstPlayed);
-            mediaPlayer.seek(skipTo);
-            mediaPlayer.play();
+            System.out.println("Is paused. Now playing");
+            currentClip.start(); // start resumes from where we left off
         }
-        else if (mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING) // is playing. should be paused.
+        else if (currentClip.isActive()) // is playing. should be paused.
         {
-            unixTimeWhenPaused = System.currentTimeMillis(); // saving where it was up to
-            mediaPlayer.pause();
+            System.out.println("Is playing. Now pausing");
+            currentClip.stop(); // stop pauses, ready to be resumed with start()
         }
     }
 
     public static void stopPlayer()
     {
-        mediaPlayer.pause();
-        mediaPlayer = null;
+        currentClip.stop();
+        currentClip = null;
     }
 
     @Override
@@ -108,7 +106,7 @@ public class Main extends Application
         GridPane.setConstraints(stopBtn, 1, 0);
         grid.getChildren().add(stopBtn);
 
-        // defining slider
+        /*// defining slider
         final Slider slider = new Slider(0, 100, 0);
         slider.setBlockIncrement(1);
         slider.valueProperty().addListener((observable, oldValue, newValue) -> {
@@ -135,7 +133,7 @@ public class Main extends Application
             slider.setValue(0);
         });
         GridPane.setConstraints(trackNames, 3, 0, 5, 10);
-        grid.getChildren().add(trackNames);
+        grid.getChildren().add(trackNames); */
 
 
         // finally making stage visible
