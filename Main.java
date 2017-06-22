@@ -9,17 +9,40 @@ import javafx.scene.control.Button;
 import javafx.event.ActionEvent;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
+import javafx.util.Duration;
 
 public class Main extends Application
 {
 
-    public static MediaPlayer mediaPlayer = null;
+    private static MediaPlayer mediaPlayer = null;
+    private static long unixTimeWhenFirstPlayed, unixTimeWhenPaused;
 
     public static MediaPlayer getMediaPlayer(String fileName)
     {
         System.out.println(System.getProperty("user.dir"));
         Media media = new Media("file:///" + System.getProperty("user.dir").replace('\\', '/') + "/" + fileName);
         return new MediaPlayer(media);
+    }
+
+    public static void playPause()
+    {
+        if (mediaPlayer == null) // playing for first time. should be played
+        {
+            unixTimeWhenFirstPlayed = System.currentTimeMillis();
+            mediaPlayer = getMediaPlayer("foobar.wav");
+            mediaPlayer.play();
+        }
+        else if (mediaPlayer.getStatus() == MediaPlayer.Status.PAUSED) // has been played before, but is paued. should be played at time
+        {
+            Duration skipTo = new Duration(unixTimeWhenPaused - unixTimeWhenFirstPlayed);
+            mediaPlayer.seek(skipTo);
+            mediaPlayer.play();
+        }
+        else if (mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING) // is playing. should be paused.
+        {
+            unixTimeWhenPaused = System.currentTimeMillis(); // saving where it was up to
+            mediaPlayer.pause();
+        }
     }
 
     @Override
@@ -38,18 +61,7 @@ public class Main extends Application
 
         // defining play button -- will play a given wav file
         Button playBtn = new Button("Play!");
-        playBtn.setOnAction((ActionEvent ae) -> {
-            if (mediaPlayer == null || mediaPlayer.getStatus() == MediaPlayer.Status.PAUSED) // if nothing is playing -- either because this is the first time, or because it's paused
-            {
-                mediaPlayer = getMediaPlayer("foobar.wav"); // using wav file because mp3s are not supported on ubuntu 16
-                mediaPlayer.play();
-            }
-            else if (mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING) // if it's playing something
-            {
-                mediaPlayer.pause();
-            }
-
-        });
+        playBtn.setOnAction((ActionEvent ae) -> playPause());
         GridPane.setConstraints(playBtn, 0, 0);
         grid.getChildren().add(playBtn);
 
