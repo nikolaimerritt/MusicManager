@@ -106,17 +106,20 @@ public class Main extends Application
         GridPane.setConstraints(stopBtn, 1, 0);
         grid.getChildren().add(stopBtn);
 
-        /*// defining slider
+        // defining slider
         final Slider slider = new Slider(0, 100, 0);
         slider.setBlockIncrement(1);
         slider.valueProperty().addListener((observable, oldValue, newValue) -> {
-            double percentSlid = newValue.doubleValue() / 100; // percent slid on slider
-            Duration seekTo = mediaPlayer.getTotalDuration().multiply(percentSlid); // amount that should be seeked to -- namely, corresponding percentage of track
-            mediaPlayer.seek(seekTo);
+            if (currentClip != null)
+            {
+                double percentSlid = newValue.longValue() / 100; // percent slid on slider
+                int goToFrame = (int) (currentClip.getFrameLength() * percentSlid);
+                currentClip.setFramePosition(goToFrame);
+            }
         });
         GridPane.setConstraints(slider, 0, 1, 2, 1);
         grid.getChildren().add(slider);
-
+        /*
         // defining listview of wav files that can be played
         File[] files = new File(absPrefix).listFiles();
         for (File file : files)
