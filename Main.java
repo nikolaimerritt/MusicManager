@@ -9,13 +9,11 @@ import javafx.scene.control.Button;
 import javafx.event.ActionEvent;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
-import java.io.File;
-
 
 public class Main extends Application
 {
 
-    public static MediaPlayer currentlyPlaying;
+    public static MediaPlayer mediaPlayer;
 
     public static MediaPlayer getMediaPlayer(String fileName)
     {
@@ -38,14 +36,26 @@ public class Main extends Application
         grid.setVgap(5);
         grid.setHgap(5);
 
-        // defining play button -- will play a preset MP3 file
+        // defining play button -- will play a given wav file
         Button playBtn = new Button("Play!");
         playBtn.setOnAction((ActionEvent ae) -> {
-            currentlyPlaying = getMediaPlayer("foobar.wav"); // using wav file because mp3s are not supported on ubuntu 16
-            currentlyPlaying.play();
+            if (mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING)
+            {
+                mediaPlayer = getMediaPlayer("foobar.wav"); // using wav file because mp3s are not supported on ubuntu 16
+                mediaPlayer.play();
+            }
+            else if (mediaPlayer.getStatus() == MediaPlayer.Status.PAUSED)
+            {
+                mediaPlayer.pause();
+            }
+
         });
         GridPane.setConstraints(playBtn, 0, 0);
         grid.getChildren().add(playBtn);
+
+        // defining pause button -- will stop the currently playing wav
+        Button stopBtn = new Button("Pause!");
+        stopBtn.setOnAction((ActionEvent ae) -> );
 
         // finally making stage visible
         stage.setScene(new Scene(grid, 300, 300));
