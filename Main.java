@@ -1,7 +1,6 @@
 package sample;
 
-import javafx.application.Platform;
-import javafx.embed.swing.JFXPanel;
+import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.layout.GridPane;
@@ -13,18 +12,20 @@ import javafx.scene.media.MediaPlayer;
 import java.io.File;
 
 
-public class Main
+public class Main extends Application
 {
 
     public static MediaPlayer currentlyPlaying;
 
-    public static MediaPlayer getMediaPlayer(String location)
+    public static MediaPlayer getMediaPlayer(String fileName)
     {
-        Media media = new Media(new File(location).toURI().toString());
+        System.out.println(System.getProperty("user.dir"));
+        Media media = new Media("file:///" + System.getProperty("user.dir").replace('\\', '/') + "/" + fileName);
         return new MediaPlayer(media);
     }
 
-    public static void initialiseGUI()
+    @Override
+    public void start(Stage primaryStage)
     {
         // setting up stage
         Stage stage = new Stage();
@@ -40,7 +41,7 @@ public class Main
         // defining play button -- will play a preset MP3 file
         Button playBtn = new Button("Play!");
         playBtn.setOnAction((ActionEvent ae) -> {
-            currentlyPlaying = getMediaPlayer("/Users/seraph/Downloads/TestMP3.mp3");
+            currentlyPlaying = getMediaPlayer("foobar.wav"); // using wav file because mp3s are not supported on ubuntu 16
             currentlyPlaying.play();
         });
         GridPane.setConstraints(playBtn, 0, 0);
@@ -53,14 +54,8 @@ public class Main
         stage.show();
     }
 
-    public static void launchFX()
+    public static void main(String[] args) throws InterruptedException
     {
-        new JFXPanel();
-        Platform.runLater(() -> initialiseGUI());
-    }
-
-    public static void main(String[] args)
-    {
-        launchFX();
+        launch(args);
     }
 }
