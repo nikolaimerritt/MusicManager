@@ -1,6 +1,8 @@
 package sample;
 
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.layout.GridPane;
@@ -82,7 +84,16 @@ public class Main extends Application
         // defining slider
         final Slider slider = new Slider(0, 100, 0);
         slider.setBlockIncrement(1);
-        GridPane.setConstraints(slider, 1, 0);
+        slider.valueProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue)
+            {
+                double percentSlid = newValue.doubleValue() / 100; // percent slid on slider
+                Duration seekTo = mediaPlayer.getTotalDuration().multiply(percentSlid); // amount that should be seeked to -- namely, corresponding percentage of track
+                mediaPlayer.seek(seekTo);
+            }
+        });
+        GridPane.setConstraints(slider, 0, 1, 2, 1);
         grid.getChildren().add(slider);
 
         // finally making stage visible
