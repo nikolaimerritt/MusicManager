@@ -3,7 +3,6 @@ package sample;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.ListView;
@@ -16,7 +15,17 @@ import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.util.Duration;
 import javafx.scene.control.Slider;
+import sun.audio.AudioPlayer;
+
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
 import java.io.File;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URL;
+import javax.swing.*;
+import javax.sound.sampled.*;
 
 public class Main extends Application
 {
@@ -28,18 +37,21 @@ public class Main extends Application
 
     public static MediaPlayer getMediaPlayer(String fileName)
     {
-        System.out.println(System.getProperty("user.dir"));
         Media media = new Media("file://" + absPrefix + "/" + fileName);
         return new MediaPlayer(media);
     }
 
-    public static void playPause()
-    {
+    public static void playPause() throws IOException, UnsupportedAudioFileException, LineUnavailableException {
         if (mediaPlayer == null) // playing for first time. should be played
         {
             unixTimeWhenFirstPlayed = System.currentTimeMillis();
-            mediaPlayer = getMediaPlayer("CodingDude.wav");
-            mediaPlayer.play();
+            URL url = new URL("http://musicmanager.duckdns.org/CodingDude.wav");
+            Clip clip = AudioSystem.getClip();
+            AudioInputStream ais = AudioSystem.getAudioInputStream(url);
+            clip.open(ais);
+            clip.start();
+            /* mediaPlayer = getMediaPlayer("CodingDude.wav");
+            mediaPlayer.play(); */
         }
         else if (mediaPlayer.getStatus() == MediaPlayer.Status.PAUSED) // has been played before, but is paused. should be played at time
         {
@@ -61,7 +73,7 @@ public class Main extends Application
     }
 
     @Override
-    public void start(Stage primaryStage)
+    public void start(Stage primaryStage) throws Exception
     {
         // setting up stage
         Stage stage = new Stage();
@@ -76,7 +88,17 @@ public class Main extends Application
 
         // defining play/pause button -- will play a given wav file
         final Button playPauseBtn = new Button("Play/Pause!");
-        playPauseBtn.setOnAction((ActionEvent ae) -> playPause());
+        playPauseBtn.setOnAction((ActionEvent ae) -> {
+            try {
+                playPause();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (UnsupportedAudioFileException e) {
+                e.printStackTrace();
+            } catch (LineUnavailableException e) {
+                e.printStackTrace();
+            }
+        });
         GridPane.setConstraints(playPauseBtn, 0, 0);
         grid.getChildren().add(playPauseBtn);
 
@@ -89,14 +111,10 @@ public class Main extends Application
         // defining slider
         final Slider slider = new Slider(0, 100, 0);
         slider.setBlockIncrement(1);
-        slider.valueProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue)
-            {
-                double percentSlid = newValue.doubleValue() / 100; // percent slid on slider
-                Duration seekTo = mediaPlayer.getTotalDuration().multiply(percentSlid); // amount that should be seeked to -- namely, corresponding percentage of track
-                mediaPlayer.seek(seekTo);
-            }
+        slider.valueProperty().addListener((observable, oldValue, newValue) -> {
+            double percentSlid = newValue.doubleValue() / 100; // percent slid on slider
+            Duration seekTo = mediaPlayer.getTotalDuration().multiply(percentSlid); // amount that should be seeked to -- namely, corresponding percentage of track
+            mediaPlayer.seek(seekTo);
         });
         GridPane.setConstraints(slider, 0, 1, 2, 1);
         grid.getChildren().add(slider);
@@ -110,13 +128,15 @@ public class Main extends Application
                 trackNames.getItems().add(file.getName());
             }
         }
-        trackNames.setOnMouseClicked(event -> {
+        trackNames.setOnMouseClicked((MouseEvent event) -> {
             if (mediaPlayer != null) { stopPlayer(); }
             mediaPlayer = getMediaPlayer(trackNames.getSelectionModel().getSelectedItem());
             mediaPlayer.play();
+            slider.setValue(0);
         });
         GridPane.setConstraints(trackNames, 3, 0, 5, 10);
         grid.getChildren().add(trackNames);
+
 
         // finally making stage visible
         stage.setScene(new Scene(grid, 300, 300));
