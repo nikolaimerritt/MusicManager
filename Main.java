@@ -38,58 +38,37 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+class PlayerManager implements Runnable
+{
+    private volatile boolean exit = false;
+
+    public void run()
+    {
+        while (!exit)
+        {
+            System.out.println("Thead running...");
+        }
+        System.out.println("Thread stopped...");
+    }
+
+    public void stop()
+    {
+        exit = true;
+    }
+}
+
 public class Main extends Application
 {
-
-    private static AdvancedPlayer mp3player = null;
-    private static int pausedOnFrame = 0;
-    private static ListView<String> trackNames = new ListView<>();
-
-    private static void setupMp3player(String fileName)
-    {
-        BufferedInputStream inputStream;
-        try
-        {
-            inputStream = new BufferedInputStream(new URL("http://www.musicmanager.duckdns.org/" + fileName).openStream());
-            mp3player = new AdvancedPlayer(inputStream); // this spawns another thread
-            mp3player.setPlayBackListener(new PlaybackListener()
-            {
-                @Override
-                public void playbackFinished(PlaybackEvent playbackEvent) {
-                    pausedOnFrame = playbackEvent.getFrame();
-                }
-            });
-        }
-        catch (IOException | JavaLayerException | NullPointerException ex) { ex.printStackTrace(); }
-    }
-
-    private static void playPause()
-    {
-        if (mp3player == null) // playing for first time. should be played
-        {
-            System.out.println("Now playing for first time...");
-            setupMp3player("CodingDude.mp3");
-            try { mp3player.play(pausedOnFrame, Integer.MAX_VALUE); } // using MAX_VALUE so it stops whenever the mp3 finishes, and is not limited
-            catch (JavaLayerException ex) { ex.printStackTrace(); }
-        }
-        else if (mp3player != null) // is playing. should be paused
-        {
-            System.out.println("Is playing. Now pausing...");
-            mp3player.stop();
-            mp3player = null;
-        }
-    }
-
-
+    private static PlayerManager playerManager;
 
     @Override
-    public void start(Stage primaryStage) throws Exception
+    public void start(Stage primaryStage)
     {
         // setting up stage
         Stage stage = new Stage();
         stage.setTitle("Music Player");
         stage.setResizable(true);
-        stage.setOnCloseRequest((WindowEvent event) -> 
+        stage.setOnCloseRequest((WindowEvent event) ->
         {
             try { Main.super.stop(); }
             catch (Exception ex) { ex.printStackTrace(); }
@@ -103,63 +82,32 @@ public class Main extends Application
         grid.setVgap(5);
         grid.setHgap(5);
 
-        // defining play/pause button -- will play a given wav file
+        // defining play/pause button
         final Button playPauseBtn = new Button("Play/Pause!");
-        playPauseBtn.setOnAction((ActionEvent ae) -> playPause());
+        playPauseBtn.setOnAction((ActionEvent ae) ->
+        {
+            playerManager = new PlayerManager();
+            Thread playerThread = new Thread(playerManager, "PlayerThread");
+            playerThread.start();
+        });
         GridPane.setConstraints(playPauseBtn, 0, 0);
         grid.getChildren().add(playPauseBtn);
 
         // defining stop button
         final Button stopBtn = new Button("Stop!");
-        stopBtn.setOnAction((ActionEvent ae) -> {
-            System.out.println("Is playing. Now stopping...");
-            mp3player.stop();
-            mp3player = null;
-            pausedOnFrame = 0; // resetting
-        });
-        GridPane.setConstraints(stopBtn, 1, 0);
-        grid.getChildren().add(stopBtn);
-
-        /*// defining slider
-        final Slider slider = new Slider(0, 100, 0);
-        slider.setBlockIncrement(1);
-        slider.valueProperty().addListener((observable, oldValue, newValue) -> {
-            if (mp3player != null)
-            {
-                double percentSlid = newValue.longValue() / 100; // percent slid on slider
-                int goToFrame = (int) (mp3player. * percentSlid);
-                currentClip.setFramePosition(goToFrame);
-            }
-        });
-        GridPane.setConstraints(slider, 0, 1, 2, 1);
-        grid.getChildren().add(slider);
-        /*
-        // defining listview of wav files that can be played
-        File[] files = new File(absPrefix).listFiles();
-        for (File file : files)
+        stopBtn.setOnAction((ActionEvent ae) ->
         {
-            if (file.isFile() && ( file.getName().contains(".mp3") || file.getName().contains(".wav") ))
-            {
-                trackNames.getItems().add(file.getName());
-            }
-        }
-        trackNames.setOnMouseClicked((MouseEvent event) -> {
-            if (mediaPlayer != null) { stopPlayer(); }
-            mediaPlayer = getMediaPlayer(trackNames.getSelectionModel().getSelectedItem());
-            mediaPlayer.play();
-            slider.setValue(0);
+            playerManager.stop();
         });
-        GridPane.setConstraints(trackNames, 3, 0, 5, 10);
-        grid.getChildren().add(trackNames); */
-
-
+        GridPane.setConstraints(stopBtn, 0, 1);
+        grid.getChildren().add(stopBtn);
+        
         // finally making stage visible
         stage.setScene(new Scene(grid, 300, 300));
         stage.setWidth(300);
         stage.setHeight(300);
         stage.show();
     }
-
 
     public static void main(String[] args) throws InterruptedException
     {
