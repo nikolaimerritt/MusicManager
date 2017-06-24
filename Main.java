@@ -1,8 +1,10 @@
 package sample;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.ListView;
@@ -13,6 +15,7 @@ import javafx.scene.control.Button;
 import javafx.event.ActionEvent;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
+import javafx.stage.WindowEvent;
 import javafx.util.Duration;
 import javafx.scene.control.Slider;
 import javax.sound.sampled.AudioInputStream;
@@ -86,6 +89,13 @@ public class Main extends Application
         Stage stage = new Stage();
         stage.setTitle("Music Player");
         stage.setResizable(true);
+        stage.setOnCloseRequest((WindowEvent event) -> 
+        {
+            try { Main.super.stop(); }
+            catch (Exception ex) { ex.printStackTrace(); }
+            Platform.exit();
+            System.exit(0);
+        });
 
         // setting up GridPane controller
         GridPane grid = new GridPane();
@@ -149,6 +159,7 @@ public class Main extends Application
         stage.setHeight(300);
         stage.show();
     }
+
 
     public static void main(String[] args) throws InterruptedException
     {
