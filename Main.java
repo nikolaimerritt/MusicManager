@@ -51,7 +51,7 @@ public class Main extends Application
         try
         {
             inputStream = new BufferedInputStream(new URL("http://www.musicmanager.duckdns.org/" + fileName).openStream());
-            mp3player = new AdvancedPlayer(inputStream);
+            mp3player = new AdvancedPlayer(inputStream); // this spawns another thread
             mp3player.setPlayBackListener(new PlaybackListener()
             {
                 @Override
