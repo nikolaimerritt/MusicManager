@@ -2,46 +2,68 @@ package sample;
 
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.control.ListView;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.scene.control.Button;
 import javafx.event.ActionEvent;
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
 import javafx.stage.WindowEvent;
-import javafx.util.Duration;
 import javafx.scene.control.Slider;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
 import java.io.*;
-import java.net.MalformedURLException;
+import java.net.*;
 import java.net.URL;
-import java.net.URL;
-import javax.swing.*;
-import javax.sound.sampled.*;
 import javazoom.jl.decoder.JavaLayerException;
-import javazoom.jl.player.AudioDevice;
-import javazoom.jl.player.Player;
-import javazoom.jl.player.advanced.AdvancedPlayer;
-import javazoom.jl.player.advanced.PlaybackEvent;
-import javazoom.jl.player.advanced.PlaybackListener;
-
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URL;
-
 
 public class Main extends Application
 {
     private static MusicPlayer musicPlayer = null;
-    private static String fileName = "CodingDude.mp3";
+    private static double percentToSkip = 0;
+    private static String fileName = "DarkSouls.mp3";
+
+    private int getFileSize(final URL url)
+    {
+        try
+        {
+            final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+            connection.setRequestMethod("HEAD");
+            connection.getInputStream();
+            final int fileSize = connection.getContentLength();
+            connection.disconnect();
+            return fileSize;
+        }
+        catch (IOException ex) { return -1; }
+    }
+
+    private void playFromScratch(final double percentToSkip)
+    {
+        final URL url;
+        final BufferedInputStream inputStream;
+        try { url = new URL("http://www.musicmanager.duckdns.org/" + fileName); }
+        catch (MalformedURLException ex) { throw new RuntimeException(ex); }
+
+        try {inputStream = new BufferedInputStream(url.openStream()); }
+        catch (final IOException ex) { throw new RuntimeException(ex); }
+
+        if (percentToSkip > 0)
+        {
+            final long framesToSkip = (long) (getFileSize(url) * percentToSkip);
+            try { inputStream.skip(framesToSkip); }
+            catch (IOException ex) { throw new RuntimeException(ex); }
+        }
+
+        try
+        {
+            musicPlayer = new MusicPlayer(inputStream);
+            musicPlayer.play();
+        }
+        catch (JavaLayerException ex) { throw new RuntimeException(ex); }
+
+    }
 
     @Override
     public void start(Stage primaryStage)
@@ -70,17 +92,7 @@ public class Main extends Application
         {
             if (musicPlayer == null || musicPlayer.playerStatus == PlayerStatus.NOT_STARTED || musicPlayer.playerStatus == PlayerStatus.FINISHED) // has not yet started. should be started for first time
             {
-                System.out.println("Starting playback of " + fileName + " from scratch...");
-                final BufferedInputStream inputStream;
-                try {inputStream = new BufferedInputStream(new URL("http://www.musicmanager.duckdns.org/" + fileName).openStream()); }// will replace name with variable
-                catch (final IOException ex) { throw new RuntimeException(ex); }
-
-                try
-                {
-                    musicPlayer = new MusicPlayer(inputStream);
-                    musicPlayer.play();
-                }
-                catch (final JavaLayerException ex) { throw new RuntimeException(ex); }
+                playFromScratch(0);
             }
 
             else if (musicPlayer.playerStatus == PlayerStatus.PAUSED) // is paused. should be played.
@@ -111,10 +123,29 @@ public class Main extends Application
         GridPane.setConstraints(stopBtn, 1, 0);
         grid.getChildren().add(stopBtn);
 
-        // defining slider
+        // defining slider <-- will be used later, once Ive got the skip functionality working through a text field first
         final Slider seekSlider = new Slider();
+        seekSlider.setMin(0);
+        seekSlider.setMax(100);
+        seekSlider.setBlockIncrement(1);
         GridPane.setConstraints(seekSlider, 0, 1, 2, 1);
         grid.getChildren().add(seekSlider);
+
+        // defining skip text field <-- will be replaced by slider soon enough, dont worry
+        final TextField skipPercentField = new TextField("Skip percentage: ");
+        skipPercentField.clear();
+        GridPane.setConstraints(skipPercentField, 0, 2);
+        grid.getChildren().add(skipPercentField);
+
+        // defining skip button
+        final Button skipButton = new Button("Skip!");
+        skipButton.setOnAction((ActionEvent ae) ->
+        {
+            musicPlayer.stop();
+            playFromScratch(Double.parseDouble(skipPercentField.getText()) / 100);
+        });
+        GridPane.setConstraints(skipButton, 1, 2);
+        grid.getChildren().add(skipButton);
 
         // finally making stage visible
         stage.setScene(new Scene(grid, 300, 300));
