@@ -2,6 +2,8 @@ package sample;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.TextField;
@@ -128,19 +130,14 @@ public class Main extends Application
         seekSlider.setMin(0);
         seekSlider.setMax(1);
         seekSlider.setBlockIncrement(0.01);
-        GridPane.setConstraints(seekSlider, 0, 1, 3, 1);
-        grid.getChildren().add(seekSlider);
-
-        // defining skip button
-        final Button skipButton = new Button("Skip!");
-        skipButton.setOnAction((ActionEvent ae) ->
+        seekSlider.valueProperty().addListener((observable, oldValue, newValue) ->
         {
             musicPlayer.stop();
-            playFromScratch(seekSlider.getValue());
+            playFromScratch(newValue.doubleValue());
         });
-        GridPane.setConstraints(skipButton, 2, 0);
-        grid.getChildren().add(skipButton);
-
+        GridPane.setConstraints(seekSlider, 0, 1, 2, 1);
+        grid.getChildren().add(seekSlider);
+        
         // finally making stage visible
         stage.setScene(new Scene(grid, 300, 300));
         stage.setWidth(300);
