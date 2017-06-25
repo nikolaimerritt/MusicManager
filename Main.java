@@ -20,16 +20,15 @@ import javafx.util.Duration;
 import javafx.scene.control.Slider;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URL;
 import javax.swing.*;
 import javax.sound.sampled.*;
 import javazoom.jl.decoder.JavaLayerException;
+import javazoom.jl.player.AudioDevice;
 import javazoom.jl.player.Player;
-import java.io.BufferedInputStream;
 import javazoom.jl.player.advanced.AdvancedPlayer;
 import javazoom.jl.player.advanced.PlaybackEvent;
 import javazoom.jl.player.advanced.PlaybackListener;
@@ -37,6 +36,124 @@ import javazoom.jl.player.advanced.PlaybackListener;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+
+class PlayerStatus
+{
+
+}
+
+class MusicPlayer
+{
+    private static final int NOT_STARTED = 0, PLAYING = 1, PAUSED = 2, FINISHED = 3; // statuses
+    private final Player player;
+    private final Object playerLock = new Object();
+    private int playerStatus = NOT_STARTED;
+
+    public MusicPlayer(final InputStream inputStream) throws JavaLayerException
+    {
+        this.player = new Player(inputStream);
+    }
+    public MusicPlayer(final InputStream inputStream, final AudioDevice audioDevice) throws JavaLayerException
+    {
+        this.player = new Player(inputStream, audioDevice);
+    }
+
+    // starts playback. resumes if paused
+    public void play() throws JavaLayerException
+    {
+        synchronized (playerLock)
+        {
+            switch (playerStatus)
+            {
+                case NOT_STARTED:
+                    final Runnable runnable = () -> playInternal();
+                    final Thread playerThread = new Thread(runnable);
+                    playerThread.setPriority(Thread.MAX_PRIORITY);
+                    playerStatus = PLAYING;
+                    playerThread.start();
+                    break;
+                case PAUSED:
+                    resume();
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    // pauses playback. returns true if successfully paused
+    public boolean pause()
+    {
+        synchronized (playerLock)
+        {
+            if (playerStatus == PLAYING)
+            {
+                playerStatus = PAUSED;
+            }
+            return playerStatus == PAUSED;
+        }
+    }
+
+    // resumes playback.returns true if new state is PLAYING
+    public boolean resume()
+    {
+        synchronized (playerLock)
+        {
+            if (playerStatus == PAUSED)
+            {
+                playerStatus = PLAYING;
+                playerLock.notifyAll();
+            }
+            return playerStatus == PLAYING;
+        }
+    }
+
+    // stops playback. if not playing, does nothing
+    public void stop()
+    {
+        synchronized (playerLock)
+        {
+            playerStatus = FINISHED;
+            playerLock.notifyAll();
+        }
+    }
+
+    private void playInternal()
+    {
+        while (playerStatus != FINISHED)
+        {
+            try
+            {
+                if (!player.play(1))
+                {
+                    break;
+                }
+            }
+            catch (final JavaLayerException ex)
+            {
+                break;
+            }
+
+            // check if paused or terminated
+            synchronized (playerLock)
+            {
+                while (playerStatus == PAUSED)
+                {
+                    try { playerLock.wait(); }
+                    catch (final InterruptedException ex) { break; } // terminates player
+                }
+            }
+        }
+        closePlayer();
+    }
+
+    public void closePlayer() // closes player, regardless of current state
+    {
+        synchronized (playerLock) { playerStatus = FINISHED; }
+        try { player.close(); }
+        catch (final Exception ex) {  } // we're ending anyway. ignore
+    }
+}
 
 public class Main extends Application
 {
