@@ -180,6 +180,25 @@ public class Main extends Application
 
         // defining play/pause button
         final Button playPauseBtn = new Button("Play/Pause!");
+        playPauseBtn.setOnAction((ActionEvent ae) ->
+        {
+            final BufferedInputStream inputStream;
+            try {inputStream = new BufferedInputStream(new URL("http://www.musicmanager.duckdns.org/" + "CodingDude.mp3").openStream()); }// will replace name with variable
+            catch (final IOException ex) { throw new RuntimeException(ex); }
+
+            final MusicPlayer musicPlayer;
+            try
+            {
+                musicPlayer = new MusicPlayer(inputStream);
+                musicPlayer.play();
+                Thread.sleep(5000);
+                musicPlayer.pause();
+                Thread.sleep(5000);
+                musicPlayer.resume();
+            }
+            catch (final JavaLayerException | InterruptedException ex) { throw new RuntimeException(ex); }
+
+        });
         GridPane.setConstraints(playPauseBtn, 0, 0);
         grid.getChildren().add(playPauseBtn);
 
