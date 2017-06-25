@@ -182,32 +182,13 @@ public class Main extends Application
 
         // defining play/pause button
         final Button playPauseBtn = new Button("Play/Pause!");
-        /*playPauseBtn.setOnAction((ActionEvent ae) ->
-        {
-            final BufferedInputStream inputStream;
-            try {inputStream = new BufferedInputStream(new URL("http://www.musicmanager.duckdns.org/" + "CodingDude.mp3").openStream()); }// will replace name with variable
-            catch (final IOException ex) { throw new RuntimeException(ex); }
-
-            try
-            {
-                musicPlayer = new MusicPlayer(inputStream);
-                musicPlayer.play();
-                Thread.sleep(5000);
-                musicPlayer.pause();
-                Thread.sleep(5000);
-                musicPlayer.resume();
-            }
-            catch (final JavaLayerException | InterruptedException ex) { throw new RuntimeException(ex); }
-
-        });*/
-
         playPauseBtn.setOnAction((ActionEvent ae) ->
         {
             if (musicPlayer == null || musicPlayer.playerStatus == PlayerStatus.NOT_STARTED || musicPlayer.playerStatus == PlayerStatus.FINISHED) // has not yet started. should be started for first time
             {
-                System.out.println("Starting with new mp3...");
+                System.out.println("Starting playback of " + fileName + " from scratch...");
                 final BufferedInputStream inputStream;
-                try {inputStream = new BufferedInputStream(new URL("http://www.musicmanager.duckdns.org/" + "CodingDude.mp3").openStream()); }// will replace name with variable
+                try {inputStream = new BufferedInputStream(new URL("http://www.musicmanager.duckdns.org/" + fileName).openStream()); }// will replace name with variable
                 catch (final IOException ex) { throw new RuntimeException(ex); }
 
                 try
@@ -220,22 +201,29 @@ public class Main extends Application
 
             else if (musicPlayer.playerStatus == PlayerStatus.PAUSED) // is paused. should be played.
             {
-                System.out.println("Resuming from paused...");
+                System.out.println("Resuming " + fileName + " from paused...");
                 musicPlayer.resume();
             }
 
             else if (musicPlayer.playerStatus == PlayerStatus.PLAYING) // is playing. should be paused
             {
-                System.out.println("Pausing...");
+                System.out.println("Pausing" + fileName + "...");
                 musicPlayer.pause();
             }
         });
-
         GridPane.setConstraints(playPauseBtn, 0, 0);
         grid.getChildren().add(playPauseBtn);
 
         // defining stop button
         final Button stopBtn = new Button("Stop!");
+        stopBtn.setOnAction((ActionEvent ae) ->
+        {
+            if (musicPlayer.playerStatus == PlayerStatus.PLAYING || musicPlayer.playerStatus == PlayerStatus.PAUSED)
+            {
+                System.out.println("Stopping playback of " + fileName + "...");
+                musicPlayer.stop();
+            }
+        });
         GridPane.setConstraints(stopBtn, 1, 0);
         grid.getChildren().add(stopBtn);
 
