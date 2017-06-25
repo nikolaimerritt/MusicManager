@@ -2,11 +2,10 @@ package sample;
 
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.scene.Scene;
-import javafx.scene.control.TextField;
+import javafx.scene.control.ListView;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.scene.control.Button;
@@ -19,12 +18,28 @@ import java.net.URL;
 import javazoom.jl.decoder.JavaLayerException;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 
 public class Main extends Application
 {
     private static MusicPlayer musicPlayer = null;
-    private static double percentToSkip = 0;
     private static String fileName = "DarkSouls.mp3";
+
+    private ListView<String> getFileNamesAtSite(String urlString)
+    {
+        ListView<String> fileNames = new ListView<>();
+        Document document;
+        try { document = Jsoup.connect(urlString).get(); }
+        catch (IOException ex) { throw new RuntimeException(ex); }
+        for (Element file : document.select("*")) // getting all files
+        {
+            String fileName = file.attr("href").replaceAll("%20", " ");
+            if (fileName.contains(".mp3")) { fileNames.getItems().add(fileName); }
+        }
+        return fileNames;
+    }
 
     private int getFileSize(final URL url)
     {
@@ -137,7 +152,14 @@ public class Main extends Application
         });
         GridPane.setConstraints(seekSlider, 0, 1, 2, 1);
         grid.getChildren().add(seekSlider);
-        
+
+        // defining files listview
+        final ListView<String> tracksListVew = getFileNamesAtSite("http://www.musicmanager.duckdns.org/");
+        tracksListVew.setOrientation(Orientation.VERTICAL);
+        tracksListVew.setPrefSize(300, 450);
+        GridPane.setConstraints(tracksListVew, 4, 0, 3, 6);
+        grid.getChildren().add(tracksListVew);
+
         // finally making stage visible
         stage.setScene(new Scene(grid, 300, 300));
         stage.setWidth(300);
