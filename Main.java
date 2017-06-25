@@ -36,7 +36,7 @@ public class Main extends Application
         for (Element file : document.select("*")) // getting all files
         {
             String fileName = file.attr("href").replaceAll("%20", " ");
-            if (fileName.contains(".mp3")) { fileNames.getItems().add(fileName); }
+            if (fileName.contains(".mp3")) { fileNames.getItems().add(fileName.replace(".mp3", "")); }
         }
         return fileNames;
     }
@@ -102,9 +102,17 @@ public class Main extends Application
         grid.setPadding(new Insets(10, 10, 10, 10));
         grid.setVgap(5);
         grid.setHgap(5);
+        stage.setWidth(460);
+        stage.setHeight(220);
+
+        // defining files listview
+        final ListView<String> tracksListVew = getFileNamesAtSite("http://www.musicmanager.duckdns.org/");
+        tracksListVew.setOrientation(Orientation.VERTICAL);
+        GridPane.setConstraints(tracksListVew, 0, 0, 100, 1);
+        grid.getChildren().add(tracksListVew);
 
         // defining play/pause button
-        final Button playPauseBtn = new Button("Play/Pause!");
+        final Button playPauseBtn = new Button("|>");
         playPauseBtn.setOnAction((ActionEvent ae) ->
         {
             if (musicPlayer == null || musicPlayer.playerStatus == PlayerStatus.NOT_STARTED || musicPlayer.playerStatus == PlayerStatus.FINISHED) // has not yet started. should be started for first time
@@ -124,21 +132,8 @@ public class Main extends Application
                 musicPlayer.pause();
             }
         });
-        GridPane.setConstraints(playPauseBtn, 0, 0);
+        GridPane.setConstraints(playPauseBtn, 0, 1, 1, 1);
         grid.getChildren().add(playPauseBtn);
-
-        // defining stop button
-        final Button stopBtn = new Button("Stop!");
-        stopBtn.setOnAction((ActionEvent ae) ->
-        {
-            if (musicPlayer.playerStatus == PlayerStatus.PLAYING || musicPlayer.playerStatus == PlayerStatus.PAUSED)
-            {
-                System.out.println("Stopping playback of " + fileName + "...");
-                musicPlayer.stop();
-            }
-        });
-        GridPane.setConstraints(stopBtn, 1, 0);
-        grid.getChildren().add(stopBtn);
 
         // defining slider <-- will be used later, once Ive got the skip functionality working through a text field first
         final Slider seekSlider = new Slider();
@@ -150,20 +145,26 @@ public class Main extends Application
             musicPlayer.stop();
             playFromScratch(newValue.doubleValue());
         });
-        GridPane.setConstraints(seekSlider, 0, 1, 2, 1);
+        GridPane.setConstraints(seekSlider, 1, 1, 98, 1);
         grid.getChildren().add(seekSlider);
 
-        // defining files listview
-        final ListView<String> tracksListVew = getFileNamesAtSite("http://www.musicmanager.duckdns.org/");
-        tracksListVew.setOrientation(Orientation.VERTICAL);
-        tracksListVew.setPrefSize(300, 450);
-        GridPane.setConstraints(tracksListVew, 4, 0, 3, 6);
-        grid.getChildren().add(tracksListVew);
+        // defining stop button
+        final Button stopBtn = new Button("#");
+        stopBtn.setOnAction((ActionEvent ae) ->
+        {
+            if (musicPlayer.playerStatus == PlayerStatus.PLAYING || musicPlayer.playerStatus == PlayerStatus.PAUSED)
+            {
+                System.out.println("Stopping playback of " + fileName + "...");
+                musicPlayer.stop();
+            }
+        });
+        GridPane.setConstraints(stopBtn, 99, 1);
+        grid.getChildren().add(stopBtn);
 
         // finally making stage visible
         stage.setScene(new Scene(grid, 300, 300));
-        stage.setWidth(300);
-        stage.setHeight(300);
+        stage.setWidth(600);
+        stage.setHeight(250);
         stage.show();
     }
 
