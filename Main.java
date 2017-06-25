@@ -2,10 +2,12 @@ package sample;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Scene;
 import javafx.scene.control.ListView;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.scene.control.Button;
@@ -25,20 +27,29 @@ import org.jsoup.nodes.Element;
 public class Main extends Application
 {
     private static MusicPlayer musicPlayer = null;
-    private static String fileName = "DarkSouls.mp3";
+    private static String songName = "DarkSouls";
+
+    private String makeURLFriendly(String original)
+    {
+        return original.replace(" ", "%20");
+    }
+    private String urlToNormal(String original)
+    {
+        return original.replace("%20", " ");
+    }
 
     private ListView<String> getFileNamesAtSite(String urlString)
     {
-        ListView<String> fileNames = new ListView<>();
+        ListView<String> songNames = new ListView<>();
         Document document;
         try { document = Jsoup.connect(urlString).get(); }
         catch (IOException ex) { throw new RuntimeException(ex); }
         for (Element file : document.select("*")) // getting all files
         {
-            String fileName = file.attr("href").replaceAll("%20", " ");
-            if (fileName.contains(".mp3")) { fileNames.getItems().add(fileName.replace(".mp3", "")); }
+            String songName = file.attr("href").replaceAll("%20", " ");
+            if (songName.contains(".mp3")) { songNames.getItems().add(songName.replace(".mp3", "")); }
         }
-        return fileNames;
+        return songNames;
     }
 
     private int getFileSize(final URL url)
@@ -53,14 +64,14 @@ public class Main extends Application
             connection.disconnect();
             return fileSize;
         }
-        catch (IOException ex) { return -1; }
+        catch (IOException ex) { throw new RuntimeException(ex); }
     }
 
     private void playFromScratch(final double percentToSkip)
     {
         final URL url;
         final BufferedInputStream inputStream;
-        try { url = new URL("http://www.musicmanager.duckdns.org/" + fileName); }
+        try { url = new URL("http://www.musicmanager.duckdns.org/" + makeURLFriendly(songName) + ".mp3"); }
         catch (MalformedURLException ex) { throw new RuntimeException(ex); }
 
         try {inputStream = new BufferedInputStream(url.openStream()); }
@@ -105,12 +116,6 @@ public class Main extends Application
         stage.setWidth(460);
         stage.setHeight(220);
 
-        // defining files listview
-        final ListView<String> tracksListVew = getFileNamesAtSite("http://www.musicmanager.duckdns.org/");
-        tracksListVew.setOrientation(Orientation.VERTICAL);
-        GridPane.setConstraints(tracksListVew, 0, 0, 100, 1);
-        grid.getChildren().add(tracksListVew);
-
         // defining play/pause button
         final Button playPauseBtn = new Button("|>");
         playPauseBtn.setOnAction((ActionEvent ae) ->
@@ -122,13 +127,13 @@ public class Main extends Application
 
             else if (musicPlayer.playerStatus == PlayerStatus.PAUSED) // is paused. should be played.
             {
-                System.out.println("Resuming " + fileName + " from paused...");
+                System.out.println("Resuming " + urlToNormal(songName) + " from paused...");
                 musicPlayer.resume();
             }
 
             else if (musicPlayer.playerStatus == PlayerStatus.PLAYING) // is playing. should be paused
             {
-                System.out.println("Pausing" + fileName + "...");
+                System.out.println("Pausing" + urlToNormal(songName) + "...");
                 musicPlayer.pause();
             }
         });
@@ -148,14 +153,28 @@ public class Main extends Application
         GridPane.setConstraints(seekSlider, 1, 1, 98, 1);
         grid.getChildren().add(seekSlider);
 
+        // defining files listview
+        final ListView<String> tracksListVew = getFileNamesAtSite("http://www.musicmanager.duckdns.org/");
+        tracksListVew.setOrientation(Orientation.VERTICAL);
+        tracksListVew.setOnMouseClicked(event ->
+        {
+            if (musicPlayer != null) { musicPlayer.stop(); }
+            seekSlider.setValue(0);
+            songName = makeURLFriendly(tracksListVew.getSelectionModel().getSelectedItem()); // making it URL-friendly
+            playFromScratch(0);
+        });
+        GridPane.setConstraints(tracksListVew, 0, 0, 100, 1);
+        grid.getChildren().add(tracksListVew);
+
         // defining stop button
         final Button stopBtn = new Button("#");
         stopBtn.setOnAction((ActionEvent ae) ->
         {
             if (musicPlayer.playerStatus == PlayerStatus.PLAYING || musicPlayer.playerStatus == PlayerStatus.PAUSED)
             {
-                System.out.println("Stopping playback of " + fileName + "...");
+                System.out.println("Stopping playback of " + urlToNormal(songName) + "...");
                 musicPlayer.stop();
+                seekSlider.setValue(0);
             }
         });
         GridPane.setConstraints(stopBtn, 99, 1);
