@@ -126,25 +126,19 @@ public class Main extends Application
         // defining slider <-- will be used later, once Ive got the skip functionality working through a text field first
         final Slider seekSlider = new Slider();
         seekSlider.setMin(0);
-        seekSlider.setMax(100);
-        seekSlider.setBlockIncrement(1);
-        GridPane.setConstraints(seekSlider, 0, 1, 2, 1);
+        seekSlider.setMax(1);
+        seekSlider.setBlockIncrement(0.01);
+        GridPane.setConstraints(seekSlider, 0, 1, 3, 1);
         grid.getChildren().add(seekSlider);
-
-        // defining skip text field <-- will be replaced by slider soon enough, dont worry
-        final TextField skipPercentField = new TextField("Skip percentage: ");
-        skipPercentField.clear();
-        GridPane.setConstraints(skipPercentField, 0, 2);
-        grid.getChildren().add(skipPercentField);
 
         // defining skip button
         final Button skipButton = new Button("Skip!");
         skipButton.setOnAction((ActionEvent ae) ->
         {
             musicPlayer.stop();
-            playFromScratch(Double.parseDouble(skipPercentField.getText()) / 100);
+            playFromScratch(seekSlider.getValue());
         });
-        GridPane.setConstraints(skipButton, 1, 2);
+        GridPane.setConstraints(skipButton, 2, 0);
         grid.getChildren().add(skipButton);
 
         // finally making stage visible
