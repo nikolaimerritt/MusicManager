@@ -39,15 +39,14 @@ import java.net.URL;
 
 class PlayerStatus
 {
-
+    public static final int NOT_STARTED = 0, PLAYING = 1, PAUSED = 2, FINISHED = 3; // statuses
 }
 
 class MusicPlayer
 {
-    private static final int NOT_STARTED = 0, PLAYING = 1, PAUSED = 2, FINISHED = 3; // statuses
     private final Player player;
     private final Object playerLock = new Object();
-    private int playerStatus = NOT_STARTED;
+    public int playerStatus = PlayerStatus.NOT_STARTED;
 
     public MusicPlayer(final InputStream inputStream) throws JavaLayerException
     {
@@ -65,14 +64,14 @@ class MusicPlayer
         {
             switch (playerStatus)
             {
-                case NOT_STARTED:
+                case PlayerStatus.NOT_STARTED:
                     final Runnable runnable = () -> playInternal();
                     final Thread playerThread = new Thread(runnable);
                     playerThread.setPriority(Thread.MAX_PRIORITY);
-                    playerStatus = PLAYING;
+                    playerStatus = PlayerStatus.PLAYING;
                     playerThread.start();
                     break;
-                case PAUSED:
+                case PlayerStatus.PAUSED:
                     resume();
                     break;
                 default:
@@ -86,11 +85,11 @@ class MusicPlayer
     {
         synchronized (playerLock)
         {
-            if (playerStatus == PLAYING)
+            if (playerStatus == PlayerStatus.PLAYING)
             {
-                playerStatus = PAUSED;
+                playerStatus = PlayerStatus.PAUSED;
             }
-            return playerStatus == PAUSED;
+            return playerStatus == PlayerStatus.PAUSED;
         }
     }
 
@@ -99,12 +98,12 @@ class MusicPlayer
     {
         synchronized (playerLock)
         {
-            if (playerStatus == PAUSED)
+            if (playerStatus == PlayerStatus.PAUSED)
             {
-                playerStatus = PLAYING;
+                playerStatus = PlayerStatus.PLAYING;
                 playerLock.notifyAll();
             }
-            return playerStatus == PLAYING;
+            return playerStatus == PlayerStatus.PLAYING;
         }
     }
 
@@ -113,14 +112,14 @@ class MusicPlayer
     {
         synchronized (playerLock)
         {
-            playerStatus = FINISHED;
+            playerStatus = PlayerStatus.FINISHED;
             playerLock.notifyAll();
         }
     }
 
     private void playInternal()
     {
-        while (playerStatus != FINISHED)
+        while (playerStatus != PlayerStatus.FINISHED)
         {
             try
             {
@@ -137,7 +136,7 @@ class MusicPlayer
             // check if paused or terminated
             synchronized (playerLock)
             {
-                while (playerStatus == PAUSED)
+                while (playerStatus == PlayerStatus.PAUSED)
                 {
                     try { playerLock.wait(); }
                     catch (final InterruptedException ex) { break; } // terminates player
@@ -149,7 +148,7 @@ class MusicPlayer
 
     public void closePlayer() // closes player, regardless of current state
     {
-        synchronized (playerLock) { playerStatus = FINISHED; }
+        synchronized (playerLock) { playerStatus = PlayerStatus.FINISHED; }
         try { player.close(); }
         catch (final Exception ex) {  } // we're ending anyway. ignore
     }
@@ -157,6 +156,9 @@ class MusicPlayer
 
 public class Main extends Application
 {
+    private static MusicPlayer musicPlayer = null;
+    private static String fileName = "CodingDude.mp3";
+
     @Override
     public void start(Stage primaryStage)
     {
@@ -180,13 +182,12 @@ public class Main extends Application
 
         // defining play/pause button
         final Button playPauseBtn = new Button("Play/Pause!");
-        playPauseBtn.setOnAction((ActionEvent ae) ->
+        /*playPauseBtn.setOnAction((ActionEvent ae) ->
         {
             final BufferedInputStream inputStream;
             try {inputStream = new BufferedInputStream(new URL("http://www.musicmanager.duckdns.org/" + "CodingDude.mp3").openStream()); }// will replace name with variable
             catch (final IOException ex) { throw new RuntimeException(ex); }
 
-            final MusicPlayer musicPlayer;
             try
             {
                 musicPlayer = new MusicPlayer(inputStream);
@@ -198,7 +199,38 @@ public class Main extends Application
             }
             catch (final JavaLayerException | InterruptedException ex) { throw new RuntimeException(ex); }
 
+        });*/
+
+        playPauseBtn.setOnAction((ActionEvent ae) ->
+        {
+            if (musicPlayer == null || musicPlayer.playerStatus == PlayerStatus.NOT_STARTED || musicPlayer.playerStatus == PlayerStatus.FINISHED) // has not yet started. should be started for first time
+            {
+                System.out.println("Starting with new mp3...");
+                final BufferedInputStream inputStream;
+                try {inputStream = new BufferedInputStream(new URL("http://www.musicmanager.duckdns.org/" + "CodingDude.mp3").openStream()); }// will replace name with variable
+                catch (final IOException ex) { throw new RuntimeException(ex); }
+
+                try
+                {
+                    musicPlayer = new MusicPlayer(inputStream);
+                    musicPlayer.play();
+                }
+                catch (final JavaLayerException ex) { throw new RuntimeException(ex); }
+            }
+
+            else if (musicPlayer.playerStatus == PlayerStatus.PAUSED) // is paused. should be played.
+            {
+                System.out.println("Resuming from paused...");
+                musicPlayer.resume();
+            }
+
+            else if (musicPlayer.playerStatus == PlayerStatus.PLAYING) // is playing. should be paused
+            {
+                System.out.println("Pausing...");
+                musicPlayer.pause();
+            }
         });
+
         GridPane.setConstraints(playPauseBtn, 0, 0);
         grid.getChildren().add(playPauseBtn);
 
