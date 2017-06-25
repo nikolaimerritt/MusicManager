@@ -38,29 +38,8 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-class PlayerManager implements Runnable
-{
-    private volatile boolean exit = false;
-
-    public void run()
-    {
-        while (!exit)
-        {
-            System.out.println("Thead running...");
-        }
-        System.out.println("Thread stopped...");
-    }
-
-    public void stop()
-    {
-        exit = true;
-    }
-}
-
 public class Main extends Application
 {
-    private static PlayerManager playerManager;
-
     @Override
     public void start(Stage primaryStage)
     {
@@ -84,24 +63,19 @@ public class Main extends Application
 
         // defining play/pause button
         final Button playPauseBtn = new Button("Play/Pause!");
-        playPauseBtn.setOnAction((ActionEvent ae) ->
-        {
-            playerManager = new PlayerManager();
-            Thread playerThread = new Thread(playerManager, "PlayerThread");
-            playerThread.start();
-        });
         GridPane.setConstraints(playPauseBtn, 0, 0);
         grid.getChildren().add(playPauseBtn);
 
         // defining stop button
         final Button stopBtn = new Button("Stop!");
-        stopBtn.setOnAction((ActionEvent ae) ->
-        {
-            playerManager.stop();
-        });
-        GridPane.setConstraints(stopBtn, 0, 1);
+        GridPane.setConstraints(stopBtn, 1, 0);
         grid.getChildren().add(stopBtn);
-        
+
+        // defining slider
+        final Slider seekSlider = new Slider();
+        GridPane.setConstraints(seekSlider, 0, 1, 2, 1);
+        grid.getChildren().add(seekSlider);
+
         // finally making stage visible
         stage.setScene(new Scene(grid, 300, 300));
         stage.setWidth(300);
