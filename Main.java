@@ -6,8 +6,11 @@ import javafx.beans.value.ObservableListValue;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.SortedList;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
@@ -23,7 +26,7 @@ import java.net.URL;
 import javazoom.jl.decoder.JavaLayerException;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.util.ArrayList;
+import java.util.*;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -36,6 +39,7 @@ public class Main extends Application
     private static MusicPlayer musicPlayer = null;
     private static String songName;
     private static final String rootURL = "http://musicmanager.duckdns.org/";
+    private static final HashMap<String, String[]> playlistHashMap = getPlaylistHashMap();
 
     private String toURL(String toFormat) { return toFormat.replaceAll(" ", "%20"); }
     private String fromURL(String deformat) { return deformat.replaceAll("%20", " "); }
@@ -95,6 +99,28 @@ public class Main extends Application
 
     }
 
+    private static HashMap<String, String[]> getPlaylistHashMap()
+    {
+        final URL url;
+        final Scanner scanner;
+        HashMap<String, String[]> playlistHashMap = new HashMap<>();
+        try { url = new URL("http://musicmanager.duckdns.org/Playlists/playlist.txt"); }
+        catch (MalformedURLException ex) { throw new RuntimeException(ex); }
+        try { scanner = new Scanner(url.openStream()); }
+        catch (IOException ex) { throw new RuntimeException(ex); }
+
+        while (scanner.hasNextLine())
+        {
+            // each line is in format playlistName:foo.mp3;bar.mp3;foobar.mp3
+            String[] splitOnPlaylist = scanner.nextLine().split(":");
+            String playlistName = splitOnPlaylist[0]; // bit before ':'
+            String[] itemsInPlaylist = splitOnPlaylist[1].split(";"); // getting all items after playlist, as array
+            playlistHashMap.put(playlistName, itemsInPlaylist);
+        }
+        return playlistHashMap;
+    }
+
+
     @Override
     public void start(Stage primaryStage)
     {
@@ -121,11 +147,6 @@ public class Main extends Application
         grid.setPadding(new Insets(10, 10, 10, 10));
         grid.setVgap(5);
         grid.setHgap(5);
-
-        // defining viewPlaylists button
-        final Button viewPlaylistsButton = new Button("≡");
-        GridPane.setConstraints(viewPlaylistsButton, 0, 0);
-        grid.getChildren().add(viewPlaylistsButton);
 
         // defining play/pause button
         final Button playPauseBtn = new Button("▮▶");
@@ -169,12 +190,12 @@ public class Main extends Application
 
         // defining files listview
         final ArrayList<String> tracksArray = getFileNamesAtSite(rootURL + "AllTracks/");
-        ListView<String> tracksListVew = new ListView<>(FXCollections.observableArrayList(tracksArray));
-        tracksListVew.setOrientation(Orientation.VERTICAL);
-        tracksListVew.setOnMouseClicked(event ->
+        ListView<String> mainListView = new ListView<>(FXCollections.observableArrayList(tracksArray));
+        mainListView.setOrientation(Orientation.VERTICAL);
+        mainListView.setOnMouseClicked(event ->
         {
             if (musicPlayer != null) { System.out.println("Stopping " +songName + "..."); musicPlayer.stop(); }
-            songName = tracksListVew.getSelectionModel().getSelectedItem();
+            songName = mainListView.getSelectionModel().getSelectedItem();
             if (songName != null)
             {
                 System.out.println("Starting " + songName + " from scratch. Skipping 0%");
@@ -182,8 +203,8 @@ public class Main extends Application
                 else { playFromScratch(0); }
             }
         });
-        GridPane.setConstraints(tracksListVew, 0, 1, 100, 1);
-        grid.getChildren().add(tracksListVew);
+        GridPane.setConstraints(mainListView, 0, 1, 100, 1);
+        grid.getChildren().add(mainListView);
 
         // defining search box
         final TextField searchField = new TextField();
@@ -192,15 +213,32 @@ public class Main extends Application
         {
             String searchText = newValue.toLowerCase();
             System.out.println(searchText);
-            tracksListVew.getItems().clear();
+            mainListView.getItems().clear();
             System.out.println("size: " + tracksArray.size());
             for (String trackName : tracksArray)
             {
-                if (trackName.toLowerCase().contains(searchText)) { tracksListVew.getItems().add(trackName); }
+                if (trackName.toLowerCase().contains(searchText)) { mainListView.getItems().add(trackName); }
             }
         }));
         GridPane.setConstraints(searchField, 1, 0,99, 1);
         grid.getChildren().add(searchField);
+
+        // defining viewPlaylists button
+        final Button viewPlaylistsButton = new Button("≡");
+        viewPlaylistsButton.setOnAction((ActionEvent ae) ->
+        {
+            ObservableList<String> playlistNames = FXCollections.observableArrayList();
+            Iterator iterator = playlistHashMap.entrySet().iterator();
+            while (iterator.hasNext())
+            {
+                Map.Entry entry = (Map.Entry) iterator.next();
+                playlistNames.add((String) entry.getKey()); // key is playlist name
+            }
+            Collections.sort(playlistNames);
+            mainListView.setItems(playlistNames);
+        });
+        GridPane.setConstraints(viewPlaylistsButton, 0, 0);
+        grid.getChildren().add(viewPlaylistsButton);
 
         // defining stop button
         final Button stopBtn = new Button("◼");
