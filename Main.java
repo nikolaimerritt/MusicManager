@@ -21,13 +21,12 @@ import java.net.MalformedURLException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
 
 public class Main extends Application
 {
     private static MusicPlayer musicPlayer = null;
-    private static String songName = "DarkSouls";
+    private static String songName;
+    private static final String rootURL = "http://musicmanager.duckdns.org/";
 
     private String toURL(String toFormat) { return toFormat.replaceAll(" ", "%20"); }
     private String fromURL(String deformat) { return deformat.replaceAll("%20", " "); }
@@ -65,7 +64,7 @@ public class Main extends Application
     {
         final URL url;
         final BufferedInputStream inputStream;
-        try { url = new URL("http://www.musicmanager.duckdns.org/" + toURL(songName) + ".mp3"); }
+        try { url = new URL(rootURL + "AllTracks/" + toURL(songName) + ".mp3"); }
         catch (MalformedURLException ex) { throw new RuntimeException(ex); }
 
         try {inputStream = new BufferedInputStream(url.openStream()); }
@@ -90,6 +89,8 @@ public class Main extends Application
     @Override
     public void start(Stage primaryStage)
     {
+        GridPane grid = new GridPane();
+
         // setting up stage
         Stage stage = new Stage();
         stage.setTitle("Music Player");
@@ -101,14 +102,16 @@ public class Main extends Application
             Platform.exit();
             System.exit(0);
         });
+        Scene scene = new Scene(grid, 300, 300);
+        scene.getStylesheets().add(Main.class.getResource("Main.css").toExternalForm());
+        stage.setWidth(460);
+        stage.setHeight(220);
+        stage.setScene(scene);
 
         // setting up GridPane controller
-        GridPane grid = new GridPane();
         grid.setPadding(new Insets(10, 10, 10, 10));
         grid.setVgap(5);
         grid.setHgap(5);
-        stage.setWidth(460);
-        stage.setHeight(220);
 
         // defining play/pause button
         final Button playPauseBtn = new Button("|>|");
@@ -151,7 +154,7 @@ public class Main extends Application
         grid.getChildren().add(seekSlider);
 
         // defining files listview
-        final ListView<String> tracksListVew = getFileNamesAtSite("http://www.musicmanager.duckdns.org/");
+        final ListView<String> tracksListVew = getFileNamesAtSite(rootURL + "AllTracks/");
         tracksListVew.setOrientation(Orientation.VERTICAL);
         tracksListVew.setOnMouseClicked(event ->
         {
@@ -179,9 +182,6 @@ public class Main extends Application
         grid.getChildren().add(stopBtn);
 
         // finally making stage visible
-        stage.setScene(new Scene(grid, 300, 300));
-        stage.setWidth(600);
-        stage.setHeight(250);
         stage.show();
     }
 
