@@ -2,6 +2,10 @@ package sample;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.value.ObservableListValue;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Scene;
@@ -19,6 +23,8 @@ import java.net.URL;
 import javazoom.jl.decoder.JavaLayerException;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -34,16 +40,16 @@ public class Main extends Application
     private String toURL(String toFormat) { return toFormat.replaceAll(" ", "%20"); }
     private String fromURL(String deformat) { return deformat.replaceAll("%20", " "); }
 
-    private ListView<String> getFileNamesAtSite(String urlString)
+    private ArrayList<String> getFileNamesAtSite(String urlString)
     {
-        ListView<String> songNames = new ListView<>();
+        ArrayList<String> songNames = new ArrayList<>();
         Document document;
         try { document = Jsoup.connect(urlString).get(); }
         catch (IOException ex) { throw new RuntimeException(ex); }
         for (Element file : document.select("*")) // getting all files
         {
             String songName = fromURL(file.attr("href"));
-            if (songName.contains(".mp3")) { songNames.getItems().add(songName.replace(".mp3", "")); }
+            if (songName.contains(".mp3")) { songNames.add(songName.replace(".mp3", "")); }
         }
         return songNames;
     }
@@ -121,12 +127,6 @@ public class Main extends Application
         GridPane.setConstraints(viewPlaylistsButton, 0, 0);
         grid.getChildren().add(viewPlaylistsButton);
 
-        // defining search box
-        final TextField searchField = new TextField();
-        searchField.setPromptText("⚲");
-        GridPane.setConstraints(searchField, 1, 0,99, 1);
-        grid.getChildren().add(searchField);
-
         // defining play/pause button
         final Button playPauseBtn = new Button("▮▶");
         playPauseBtn.setOnAction((ActionEvent ae) ->
@@ -168,18 +168,39 @@ public class Main extends Application
         grid.getChildren().add(seekSlider);
 
         // defining files listview
-        final ListView<String> tracksListVew = getFileNamesAtSite(rootURL + "AllTracks/");
+        final ArrayList<String> tracksArray = getFileNamesAtSite(rootURL + "AllTracks/");
+        ListView<String> tracksListVew = new ListView<>(FXCollections.observableArrayList(tracksArray));
         tracksListVew.setOrientation(Orientation.VERTICAL);
         tracksListVew.setOnMouseClicked(event ->
         {
             if (musicPlayer != null) { System.out.println("Stopping " +songName + "..."); musicPlayer.stop(); }
             songName = tracksListVew.getSelectionModel().getSelectedItem();
-            System.out.println("Starting " + songName + " from scratch. Skipping 0%");
-            if (seekSlider.getValue() != 0) { seekSlider.setValue(0); }// <-- will automatically play it
-            else { playFromScratch(0); }
+            if (songName != null)
+            {
+                System.out.println("Starting " + songName + " from scratch. Skipping 0%");
+                if (seekSlider.getValue() != 0) { seekSlider.setValue(0); }// <-- will automatically play it
+                else { playFromScratch(0); }
+            }
         });
         GridPane.setConstraints(tracksListVew, 0, 1, 100, 1);
         grid.getChildren().add(tracksListVew);
+
+        // defining search box
+        final TextField searchField = new TextField();
+        searchField.setPromptText("⚲");
+        searchField.textProperty().addListener(((observable, oldValue, newValue) ->
+        {
+            String searchText = newValue.toLowerCase();
+            System.out.println(searchText);
+            tracksListVew.getItems().clear();
+            System.out.println("size: " + tracksArray.size());
+            for (String trackName : tracksArray)
+            {
+                if (trackName.toLowerCase().contains(searchText)) { tracksListVew.getItems().add(trackName); }
+            }
+        }));
+        GridPane.setConstraints(searchField, 1, 0,99, 1);
+        grid.getChildren().add(searchField);
 
         // defining stop button
         final Button stopBtn = new Button("◼");
