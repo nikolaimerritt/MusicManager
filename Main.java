@@ -2,12 +2,10 @@ package sample;
 
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Scene;
 import javafx.scene.control.ListView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.scene.control.Button;
@@ -23,20 +21,16 @@ import java.net.MalformedURLException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 
 public class Main extends Application
 {
     private static MusicPlayer musicPlayer = null;
     private static String songName = "DarkSouls";
 
-    private String makeURLFriendly(String original)
-    {
-        return original.replace(" ", "%20");
-    }
-    private String urlToNormal(String original)
-    {
-        return original.replace("%20", " ");
-    }
+    private String toURL(String toFormat) { return toFormat.replaceAll(" ", "%20"); }
+    private String fromURL(String deformat) { return deformat.replaceAll("%20", " "); }
 
     private ListView<String> getFileNamesAtSite(String urlString)
     {
@@ -46,7 +40,7 @@ public class Main extends Application
         catch (IOException ex) { throw new RuntimeException(ex); }
         for (Element file : document.select("*")) // getting all files
         {
-            String songName = file.attr("href").replaceAll("%20", " ");
+            String songName = fromURL(file.attr("href"));
             if (songName.contains(".mp3")) { songNames.getItems().add(songName.replace(".mp3", "")); }
         }
         return songNames;
@@ -71,7 +65,7 @@ public class Main extends Application
     {
         final URL url;
         final BufferedInputStream inputStream;
-        try { url = new URL("http://www.musicmanager.duckdns.org/" + makeURLFriendly(songName) + ".mp3"); }
+        try { url = new URL("http://www.musicmanager.duckdns.org/" + toURL(songName) + ".mp3"); }
         catch (MalformedURLException ex) { throw new RuntimeException(ex); }
 
         try {inputStream = new BufferedInputStream(url.openStream()); }
@@ -117,23 +111,24 @@ public class Main extends Application
         stage.setHeight(220);
 
         // defining play/pause button
-        final Button playPauseBtn = new Button("|>");
+        final Button playPauseBtn = new Button("|>|");
         playPauseBtn.setOnAction((ActionEvent ae) ->
         {
             if (musicPlayer == null || musicPlayer.playerStatus == PlayerStatus.NOT_STARTED || musicPlayer.playerStatus == PlayerStatus.FINISHED) // has not yet started. should be started for first time
             {
+                System.out.println("Starting " + songName + "from scratch. Skipping 0%");
                 playFromScratch(0);
             }
 
             else if (musicPlayer.playerStatus == PlayerStatus.PAUSED) // is paused. should be played.
             {
-                System.out.println("Resuming " + urlToNormal(songName) + " from paused...");
+                System.out.println("Resuming " + songName + " from paused...");
                 musicPlayer.resume();
             }
 
             else if (musicPlayer.playerStatus == PlayerStatus.PLAYING) // is playing. should be paused
             {
-                System.out.println("Pausing" + urlToNormal(songName) + "...");
+                System.out.println("Pausing" + songName + "...");
                 musicPlayer.pause();
             }
         });
@@ -147,8 +142,10 @@ public class Main extends Application
         seekSlider.setBlockIncrement(0.01);
         seekSlider.valueProperty().addListener((observable, oldValue, newValue) ->
         {
-            musicPlayer.stop();
-            playFromScratch(newValue.doubleValue());
+            double skipMultiplier = newValue.doubleValue();
+            System.out.println("Playing " + songName + " from scratch. Skipping " + 100 * skipMultiplier + "%");
+            if (musicPlayer != null) { musicPlayer.stop(); }
+            playFromScratch(skipMultiplier);
         });
         GridPane.setConstraints(seekSlider, 1, 1, 98, 1);
         grid.getChildren().add(seekSlider);
@@ -158,10 +155,11 @@ public class Main extends Application
         tracksListVew.setOrientation(Orientation.VERTICAL);
         tracksListVew.setOnMouseClicked(event ->
         {
-            if (musicPlayer != null) { musicPlayer.stop(); }
-            seekSlider.setValue(0);
-            songName = makeURLFriendly(tracksListVew.getSelectionModel().getSelectedItem()); // making it URL-friendly
-            playFromScratch(0);
+            if (musicPlayer != null) { System.out.println("Stopping " +songName + "..."); musicPlayer.stop(); }
+            songName = tracksListVew.getSelectionModel().getSelectedItem();
+            System.out.println("Starting " + songName + " from scratch. Skipping 0%");
+            if (seekSlider.getValue() != 0) { seekSlider.setValue(0); }// <-- will automatically play it
+            else { playFromScratch(0); }
         });
         GridPane.setConstraints(tracksListVew, 0, 0, 100, 1);
         grid.getChildren().add(tracksListVew);
@@ -172,9 +170,9 @@ public class Main extends Application
         {
             if (musicPlayer.playerStatus == PlayerStatus.PLAYING || musicPlayer.playerStatus == PlayerStatus.PAUSED)
             {
-                System.out.println("Stopping playback of " + urlToNormal(songName) + "...");
-                musicPlayer.stop();
+                System.out.println("Stopping playback of " + songName + "...");
                 seekSlider.setValue(0);
+                musicPlayer.stop();
             }
         });
         GridPane.setConstraints(stopBtn, 99, 1);
