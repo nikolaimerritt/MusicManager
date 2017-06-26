@@ -1,0 +1,9 @@
+.root
+{
+    -fx-background-image: url("http://musicmanager.duckdns.org/Images/beige.jpg");
+}
+
+.button:hover
+{
+    -fx-background-color: linear-gradient(#2A5058, #61a2b1);
+}
