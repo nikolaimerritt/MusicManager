@@ -104,7 +104,7 @@ public class Main extends Application
         });
         Scene scene = new Scene(grid, 300, 300);
         scene.getStylesheets().add(Main.class.getResource("Main.css").toExternalForm());
-        stage.setWidth(460);
+        stage.setWidth(580);
         stage.setHeight(220);
         stage.setScene(scene);
 
