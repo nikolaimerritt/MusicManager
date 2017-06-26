@@ -6,6 +6,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Scene;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.scene.control.Button;
@@ -21,6 +22,8 @@ import java.net.MalformedURLException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+
+import javax.xml.soap.Text;
 
 public class Main extends Application
 {
@@ -105,7 +108,7 @@ public class Main extends Application
         Scene scene = new Scene(grid, 300, 300);
         scene.getStylesheets().add(Main.class.getResource("Main.css").toExternalForm());
         stage.setWidth(580);
-        stage.setHeight(220);
+        stage.setHeight(300);
         stage.setScene(scene);
 
         // setting up GridPane controller
@@ -113,8 +116,19 @@ public class Main extends Application
         grid.setVgap(5);
         grid.setHgap(5);
 
+        // defining viewPlaylists button
+        final Button viewPlaylistsButton = new Button("≡");
+        GridPane.setConstraints(viewPlaylistsButton, 0, 0);
+        grid.getChildren().add(viewPlaylistsButton);
+
+        // defining search box
+        final TextField searchField = new TextField();
+        searchField.setPromptText("⚲");
+        GridPane.setConstraints(searchField, 1, 0,99, 1);
+        grid.getChildren().add(searchField);
+
         // defining play/pause button
-        final Button playPauseBtn = new Button("|>|");
+        final Button playPauseBtn = new Button("▮▶");
         playPauseBtn.setOnAction((ActionEvent ae) ->
         {
             if (musicPlayer == null || musicPlayer.playerStatus == PlayerStatus.NOT_STARTED || musicPlayer.playerStatus == PlayerStatus.FINISHED) // has not yet started. should be started for first time
@@ -135,7 +149,7 @@ public class Main extends Application
                 musicPlayer.pause();
             }
         });
-        GridPane.setConstraints(playPauseBtn, 0, 1, 1, 1);
+        GridPane.setConstraints(playPauseBtn, 0, 2, 1, 1);
         grid.getChildren().add(playPauseBtn);
 
         // defining slider <-- will be used later, once Ive got the skip functionality working through a text field first
@@ -150,7 +164,7 @@ public class Main extends Application
             if (musicPlayer != null) { musicPlayer.stop(); }
             playFromScratch(skipMultiplier);
         });
-        GridPane.setConstraints(seekSlider, 1, 1, 98, 1);
+        GridPane.setConstraints(seekSlider, 1, 2, 98, 1);
         grid.getChildren().add(seekSlider);
 
         // defining files listview
@@ -164,11 +178,11 @@ public class Main extends Application
             if (seekSlider.getValue() != 0) { seekSlider.setValue(0); }// <-- will automatically play it
             else { playFromScratch(0); }
         });
-        GridPane.setConstraints(tracksListVew, 0, 0, 100, 1);
+        GridPane.setConstraints(tracksListVew, 0, 1, 100, 1);
         grid.getChildren().add(tracksListVew);
 
         // defining stop button
-        final Button stopBtn = new Button("#");
+        final Button stopBtn = new Button("◼");
         stopBtn.setOnAction((ActionEvent ae) ->
         {
             if (musicPlayer.playerStatus == PlayerStatus.PLAYING || musicPlayer.playerStatus == PlayerStatus.PAUSED)
@@ -178,7 +192,7 @@ public class Main extends Application
                 musicPlayer.stop();
             }
         });
-        GridPane.setConstraints(stopBtn, 99, 1);
+        GridPane.setConstraints(stopBtn, 99, 2);
         grid.getChildren().add(stopBtn);
 
         // finally making stage visible
