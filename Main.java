@@ -214,7 +214,7 @@ public class Main extends Application
                 if (trackName.toLowerCase().contains(searchText)) { mainListView.getItems().add(trackName); }
             }
         }));
-        GridPane.setConstraints(searchField, 1, 0,99, 1);
+        GridPane.setConstraints(searchField, 1, 0,98, 1);
         grid.getChildren().add(searchField);
 
         // defining viewPlaylists button
@@ -243,6 +243,11 @@ public class Main extends Application
         });
         GridPane.setConstraints(viewPlaylistsButton, 0, 0);
         grid.getChildren().add(viewPlaylistsButton);
+
+        // defining add button
+        final Button addButton = new Button("➕");
+        GridPane.setConstraints(addButton, 99, 0);
+        grid.getChildren().add(addButton);
 
         // defining stop button
         final Button stopBtn = new Button("◼");
