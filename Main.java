@@ -223,7 +223,7 @@ public class Main extends Application
         {
             switch (viewMode)
             {
-                case ViewMode.MUSIC_OVERVIEW: // and button has been pressed
+                case ViewMode.MUSIC_OVERVIEW: // going to playlist overview
                     viewMode = ViewMode.PLAYLIST_OVERVIEW;
                     ObservableList<String> playlistNames = FXCollections.observableArrayList();
                     Iterator iterator = playlistHashMap.entrySet().iterator();
@@ -236,20 +236,38 @@ public class Main extends Application
                     mainListView.setItems(playlistNames);
                     break;
 
-                case ViewMode.PLAYLIST_OVERVIEW: // and button has been pressed
+                default: // reverting to music overview
                     viewMode = ViewMode.MUSIC_OVERVIEW;
                     mainListView.getItems().clear();
                     tracksArray.forEach(track -> mainListView.getItems().add(track));
                     break;
 
-                default: break;
             }
         });
         GridPane.setConstraints(viewPlaylistsButton, 0, 0);
         grid.getChildren().add(viewPlaylistsButton);
 
         // defining add button
-        final Button addButton = new Button("➕");
+        final Button addButton = new Button("✎");
+        addButton.setOnAction((ActionEvent ae) ->
+        {
+            switch (viewMode)
+            {
+                case ViewMode.MUSIC_OVERVIEW: // will allow user to upload new music file
+                    System.out.println("Selected: add/remove tracks from library");
+                    break;
+
+                case ViewMode.PLAYLIST_OVERVIEW: // will allow user to add new playlist
+                    System.out.println("Selected: add/remove playlist");
+                    break;
+
+                case ViewMode.SINGLE_PLAYLIST: // will allow user to edit playlist
+                    System.out.println("Selected: add/remove tracks from playlist");
+                    break;
+
+                default: break; // this should never be reached, but just in case
+            }
+        });
         GridPane.setConstraints(addButton, 99, 0);
         grid.getChildren().add(addButton);
 
