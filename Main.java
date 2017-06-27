@@ -32,7 +32,7 @@ public class Main extends Application
     private static String songName;
     private static final String rootURL = "http://musicmanager.duckdns.org/";
     private static final HashMap<String, String[]> playlistHashMap = getPlaylistHashMap();
-    private static boolean isPlaylistMode = false;
+    private static int viewMode = ViewMode.MUSIC_OVERVIEW;
     private final ArrayList<String> tracksArray = getFileNamesAtSite(rootURL + "AllTracks/");
 
 
@@ -221,25 +221,29 @@ public class Main extends Application
         final Button viewPlaylistsButton = new Button("≡");
         viewPlaylistsButton.setOnAction((ActionEvent ae) ->
         {
-            isPlaylistMode = !isPlaylistMode;
-            if (isPlaylistMode)
+            switch (viewMode)
             {
-                ObservableList<String> playlistNames = FXCollections.observableArrayList();
-                Iterator iterator = playlistHashMap.entrySet().iterator();
-                while (iterator.hasNext())
-                {
-                    Map.Entry entry = (Map.Entry) iterator.next();
-                    playlistNames.add((String) entry.getKey()); // key is playlist name
-                }
-                Collections.sort(playlistNames);
-                mainListView.setItems(playlistNames);
-            }
-            else
-            {
-                mainListView.getItems().clear();
-                tracksArray.forEach(track -> mainListView.getItems().add(track));
-            }
+                case ViewMode.MUSIC_OVERVIEW: // and button has been pressed
+                    viewMode = ViewMode.PLAYLIST_OVERVIEW;
+                    ObservableList<String> playlistNames = FXCollections.observableArrayList();
+                    Iterator iterator = playlistHashMap.entrySet().iterator();
+                    while (iterator.hasNext())
+                    {
+                        Map.Entry entry = (Map.Entry) iterator.next();
+                        playlistNames.add((String) entry.getKey()); // key is playlist name
+                    }
+                    Collections.sort(playlistNames);
+                    mainListView.setItems(playlistNames);
+                    break;
 
+                case ViewMode.PLAYLIST_OVERVIEW: // and button has been pressed
+                    viewMode = ViewMode.MUSIC_OVERVIEW;
+                    mainListView.getItems().clear();
+                    tracksArray.forEach(track -> mainListView.getItems().add(track));
+                    break;
+
+                default: break;
+            }
         });
         GridPane.setConstraints(viewPlaylistsButton, 0, 0);
         grid.getChildren().add(viewPlaylistsButton);
