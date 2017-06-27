@@ -2,15 +2,10 @@ package sample;
 
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.beans.value.ObservableListValue;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.collections.transformation.SortedList;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
@@ -27,12 +22,9 @@ import javazoom.jl.decoder.JavaLayerException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.*;
-
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-
-import javax.xml.soap.Text;
 
 public class Main extends Application
 {
@@ -40,6 +32,9 @@ public class Main extends Application
     private static String songName;
     private static final String rootURL = "http://musicmanager.duckdns.org/";
     private static final HashMap<String, String[]> playlistHashMap = getPlaylistHashMap();
+    private static boolean isPlaylistMode = false;
+    private final ArrayList<String> tracksArray = getFileNamesAtSite(rootURL + "AllTracks/");
+
 
     private String toURL(String toFormat) { return toFormat.replaceAll(" ", "%20"); }
     private String fromURL(String deformat) { return deformat.replaceAll("%20", " "); }
@@ -189,7 +184,6 @@ public class Main extends Application
         grid.getChildren().add(seekSlider);
 
         // defining files listview
-        final ArrayList<String> tracksArray = getFileNamesAtSite(rootURL + "AllTracks/");
         ListView<String> mainListView = new ListView<>(FXCollections.observableArrayList(tracksArray));
         mainListView.setOrientation(Orientation.VERTICAL);
         mainListView.setOnMouseClicked(event ->
@@ -227,15 +221,25 @@ public class Main extends Application
         final Button viewPlaylistsButton = new Button("≡");
         viewPlaylistsButton.setOnAction((ActionEvent ae) ->
         {
-            ObservableList<String> playlistNames = FXCollections.observableArrayList();
-            Iterator iterator = playlistHashMap.entrySet().iterator();
-            while (iterator.hasNext())
+            isPlaylistMode = !isPlaylistMode;
+            if (isPlaylistMode)
             {
-                Map.Entry entry = (Map.Entry) iterator.next();
-                playlistNames.add((String) entry.getKey()); // key is playlist name
+                ObservableList<String> playlistNames = FXCollections.observableArrayList();
+                Iterator iterator = playlistHashMap.entrySet().iterator();
+                while (iterator.hasNext())
+                {
+                    Map.Entry entry = (Map.Entry) iterator.next();
+                    playlistNames.add((String) entry.getKey()); // key is playlist name
+                }
+                Collections.sort(playlistNames);
+                mainListView.setItems(playlistNames);
             }
-            Collections.sort(playlistNames);
-            mainListView.setItems(playlistNames);
+            else
+            {
+                mainListView.getItems().clear();
+                tracksArray.forEach(track -> mainListView.getItems().add(track));
+            }
+
         });
         GridPane.setConstraints(viewPlaylistsButton, 0, 0);
         grid.getChildren().add(viewPlaylistsButton);
