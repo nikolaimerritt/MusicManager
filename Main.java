@@ -3,7 +3,6 @@ package sample;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Scene;
@@ -23,18 +22,16 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
-public class Main /* extends Application */
+public class Main extends Application
 {
-    /* private static QueuePlayer musicPlayer = null;
-    private static String songName;
-    private static final String rootURL = "http://musicmanager.duckdns.org/";
+    private static QueuePlayer queuePlayer = new QueuePlayer();
+    static final String rootURL = "http://musicmanager.duckdns.org/";
     private static final HashMap<String, String[]> playlistHashMap = getPlaylistHashMap();
-    private static int viewMode = ViewMode.MUSIC_OVERVIEW;*/
-    protected static final String rootURL = "http://musicmanager.duckdns.org/";
+    private static int viewMode = ViewMode.MUSIC_OVERVIEW;
     private static final ArrayList<String> tracksArray = getFileNamesAtSite(rootURL + "AllTracks/");
-    protected static ArrayList<String> tracksQueue = tracksArray;
+    static ArrayList<String> tracksQueue = tracksArray;
 
-    /*@Override
+    @Override
     public void start(Stage primaryStage)
     {
         GridPane grid = new GridPane();
@@ -65,21 +62,21 @@ public class Main /* extends Application */
         final Button playPauseBtn = new Button("▮▶");
         playPauseBtn.setOnAction((ActionEvent ae) ->
         {
-            switch (musicPlayer.playerStatus)
+            switch (queuePlayer.playerStatus)
             {
                 case PlayerStatus.PLAYING: // should be paused
-                    System.out.println("Pausing " + songName + "...");
-                    musicPlayer.pause();
+                    System.out.println("Pausing " + tracksQueue.get(0) + "...");
+                    queuePlayer.pauseQueue();
                     break;
 
                 case PlayerStatus.PAUSED: // should be played
-                    System.out.println("Resuming " + songName + " from paused...");
-                    musicPlayer.resume();
+                    System.out.println("Resuming " + tracksQueue.get(0) + " from paused...");
+                    queuePlayer.resumeQueue();
                     break;
 
                 default: // should be played from scratch
-                    System.out.println("Starting " + songName + "from scratch. Skipping 0%");
-                    playFromScratch(0);
+                    System.out.println("Starting " + tracksQueue.get(0) + "from scratch. Skipping 0%");
+                    queuePlayer.playNewQueue();
                     break;
             }
         });
@@ -91,106 +88,33 @@ public class Main /* extends Application */
         seekSlider.setMin(0);
         seekSlider.setMax(1);
         seekSlider.setBlockIncrement(0.01);
-        seekSlider.valueProperty().addListener((observable, oldValue, newValue) ->
-        {
-            double skipMultiplier = newValue.doubleValue();
-            System.out.println("Playing " + songName + " from scratch. Skipping " + 100 * skipMultiplier + "%");
-            if (musicPlayer != null) { musicPlayer.stop(); }
-            playFromScratch(skipMultiplier);
-        });
         GridPane.setConstraints(seekSlider, 1, 2, 98, 1);
         grid.getChildren().add(seekSlider);
 
         // defining files listview
         ListView<String> mainListView = new ListView<>(FXCollections.observableArrayList(tracksArray));
         mainListView.setOrientation(Orientation.VERTICAL);
-        mainListView.setOnMouseClicked(event ->
-        {
-            if (musicPlayer != null) { System.out.println("Stopping " +songName + "..."); musicPlayer.stop(); }
-            songName = mainListView.getSelectionModel().getSelectedItem();
-            if (songName != null)
-            {
-                System.out.println("Starting " + songName + " from scratch. Skipping 0%");
-                if (seekSlider.getValue() != 0) { seekSlider.setValue(0); }// <-- will automatically play it
-                else { playFromScratch(0); }
-            }
-        });
         GridPane.setConstraints(mainListView, 0, 1, 100, 1);
         grid.getChildren().add(mainListView);
 
         // defining search box
         final TextField searchField = new TextField();
         searchField.setPromptText("⚲");
-        searchField.textProperty().addListener(((observable, oldValue, newValue) ->
-        {
-            String searchText = newValue.toLowerCase();
-            System.out.println(searchText);
-            mainListView.getItems().clear();
-            System.out.println("size: " + tracksArray.size());
-            for (String trackName : tracksArray)
-            {
-                if (trackName.toLowerCase().contains(searchText)) { mainListView.getItems().add(trackName); }
-            }
-        }));
         GridPane.setConstraints(searchField, 1, 0,98, 1);
         grid.getChildren().add(searchField);
 
         // defining viewPlaylists button
         final Button viewPlaylistsButton = new Button("≡");
-        viewPlaylistsButton.setOnAction((ActionEvent ae) ->
-        {
-            switch (viewMode)
-            {
-                case ViewMode.MUSIC_OVERVIEW: // going to playlist overview
-                    viewMode = ViewMode.PLAYLIST_OVERVIEW;
-                    ObservableList<String> playlistNames = FXCollections.observableArrayList();
-                    for (Object object : playlistHashMap.entrySet())
-                    {
-                        Map.Entry entry = (Map.Entry) object;
-                        playlistNames.add((String) entry.getKey()); // key is playlist name
-                    }
-                    Collections.sort(playlistNames);
-                    mainListView.setItems(playlistNames);
-                    break;
-
-                default: // reverting to music overview
-                    viewMode = ViewMode.MUSIC_OVERVIEW;
-                    mainListView.getItems().clear();
-                    tracksArray.forEach(track -> mainListView.getItems().add(track));
-                    break;
-
-            }
-        });
         GridPane.setConstraints(viewPlaylistsButton, 0, 0);
         grid.getChildren().add(viewPlaylistsButton);
 
         // defining add button
         final Button addButton = new Button("✎");
-        addButton.setOnAction((ActionEvent ae) ->
-        {
-            switch (viewMode)
-            {
-                case ViewMode.MUSIC_OVERVIEW: // will allow user to upload new music file
-                    System.out.println("Selected: add/remove tracks from library");
-                    break;
-
-                case ViewMode.PLAYLIST_OVERVIEW: // will allow user to add new playlist
-                    System.out.println("Selected: add/remove playlist");
-                    break;
-
-                case ViewMode.SINGLE_PLAYLIST: // will allow user to edit playlist
-                    System.out.println("Selected: add/remove tracks from playlist");
-                    break;
-
-                default: break; // this should never be reached, but just in case
-            }
-        });
         GridPane.setConstraints(addButton, 99, 0);
         grid.getChildren().add(addButton);
 
         // defining shuffle button
         final Button shuffleButton = new Button("\uD83D\uDD00"); // shuffle unicode character
-        shuffleButton.setOnAction((ActionEvent ae) -> Collections.shuffle(tracksQueue));
         GridPane.setConstraints(shuffleButton, 99, 2);
         grid.getChildren().add(shuffleButton);
 
@@ -198,7 +122,7 @@ public class Main /* extends Application */
         stage.show();
     }
 
-    private String toURL(String toFormat) { return toFormat.replaceAll(" ", "%20"); }*/
+    private String toURL(String toFormat) { return toFormat.replaceAll(" ", "%20"); }
     private static String fromURL(String deformat) { return deformat.replaceAll("%20", " "); }
 
     private static ArrayList<String> getFileNamesAtSite(String urlString)
@@ -215,7 +139,7 @@ public class Main /* extends Application */
         return songNames;
     }
 
-    /*private static HashMap<String, String[]> getPlaylistHashMap()
+    private static HashMap<String, String[]> getPlaylistHashMap()
     {
         final URL url;
         final Scanner scanner;
@@ -234,12 +158,10 @@ public class Main /* extends Application */
             playlistHashMap.put(playlistName, itemsInPlaylist);
         }
         return playlistHashMap;
-    }*/
+    }
 
     public static void main(String[] args) throws InterruptedException
     {
-        //launch(args);
-        QueuePlayer queuePlayer = new QueuePlayer();
-        queuePlayer.playQueue();
+        launch(args);
     }
 }
