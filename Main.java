@@ -25,7 +25,7 @@ import org.jsoup.nodes.Element;
 
 public class Main /* extends Application */
 {
-    /*private static QueuePlayer musicPlayer = null;
+    /* private static QueuePlayer musicPlayer = null;
     private static String songName;
     private static final String rootURL = "http://musicmanager.duckdns.org/";
     private static final HashMap<String, String[]> playlistHashMap = getPlaylistHashMap();
