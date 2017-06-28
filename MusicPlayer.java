@@ -12,8 +12,10 @@ import java.util.ArrayList;
 class QueuePlayer
 {
     private Player player = null;
-    private volatile int playerStatus = PlayerStatus.NOT_STARTED;
-    protected QueuePlayer() {}
+    private final Object playerLock = new Object();
+    volatile int playerStatus = PlayerStatus.NOT_STARTED;
+
+    QueuePlayer() {}
 
     private synchronized int getFileSize(final URL url)
     {
@@ -61,41 +63,75 @@ class QueuePlayer
     {
         player = setUpPlayer(skipMultiplier);
         playerStatus = PlayerStatus.PLAYING;
-        while (playerStatus == PlayerStatus.PLAYING)
+        while (playerStatus != PlayerStatus.FINISHED)
         {
-            if (!player.play(1)) // got to end of song
+            if (playerStatus == PlayerStatus.PLAYING)
             {
-                System.out.println("Reached end of " + Main.tracksQueue.get(0) + "...");
-                Main.tracksQueue = shiftLeftBy(Main.tracksQueue, 1);
-                playQueueInternal(0);
+                if (!player.play(1)) // got to end of song
+                {
+                    System.out.println("Reached end of " + Main.tracksQueue.get(0) + "...");
+                    Main.tracksQueue = shiftLeftBy(Main.tracksQueue, 1);
+                    playQueueInternal(0);
+                }
+            }
+        }
+        System.out.println("Interrupting self...");
+        player.close();
+        Thread.currentThread().interrupt();
+    }
+
+    void playNewQueue()
+    {
+        synchronized (playerLock)
+        {
+            Runnable queuePlayerRunnable = () ->
+            {
+                try { playQueueInternal(0); }
+                catch (JavaLayerException | IOException ex) { throw new RuntimeException(ex); }
+            };
+            Thread queuePlayerThread = new Thread(queuePlayerRunnable);
+            if (playerStatus != PlayerStatus.NOT_STARTED) { stopQueue(); } // stops playing an already existing queue
+            queuePlayerThread.start();
+        }
+    }
+
+    void pauseQueue()
+    {
+        synchronized (playerLock)
+        {
+            if (playerStatus == PlayerStatus.PLAYING)
+            {
+                System.out.println("Pausing queue...");
+                playerStatus = PlayerStatus.PAUSED;
             }
         }
     }
 
-    protected synchronized void playQueue()
+    void resumeQueue()
     {
-        Runnable queuePlayerRunnable = () ->
+        synchronized (playerLock)
         {
-            try { playQueueInternal(0); }
-            catch (JavaLayerException | IOException ex) { throw new RuntimeException(ex); }
-        };
-        Thread queuePlayerThread = new Thread(queuePlayerRunnable);
-        queuePlayerThread.start();
+            if (playerStatus == PlayerStatus.PAUSED)
+            {
+                System.out.println("Resuming queue...");
+                playerStatus = PlayerStatus.PLAYING;
+                playerLock.notifyAll();
+            }
+        }
     }
 
-    protected synchronized void pauseQueue()
+    void stopQueue()
     {
-        if (playerStatus == PlayerStatus.PLAYING) { playerStatus = PlayerStatus.PAUSED; }
+        synchronized (playerLock)
+        {
+            playerStatus = PlayerStatus.FINISHED;
+            playerLock.notifyAll();
+        }
     }
 
-    protected synchronized void resumeQueue()
+    synchronized void skipCurrentTrack(final double skipMultiplier) throws JavaLayerException, IOException
     {
-        if (playerStatus == PlayerStatus.PAUSED) { playerStatus = PlayerStatus.PLAYING; }
-    }
-
-    protected synchronized void skipCurrentTrack(final double skipMultiplier) throws JavaLayerException, IOException
-    {
-        playerStatus = PlayerStatus.PAUSED;
-        playQueueInternal(skipMultiplier);
+        stopQueue();
+        playQueueInternal(skipMultiplier); // will automatically be on current track
     }
 }
