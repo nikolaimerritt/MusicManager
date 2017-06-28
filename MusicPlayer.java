@@ -1,112 +1,101 @@
 package sample;
 
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import javazoom.jl.decoder.JavaLayerException;
 import javazoom.jl.player.Player;
-import java.io.InputStream;
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
 
-class MusicPlayer
+class QueuePlayer
 {
-    private final Player player;
-    private final Object playerLock = new Object();
-    int playerStatus;
+    private Player player = null;
+    private volatile int playerStatus = PlayerStatus.NOT_STARTED;
+    protected QueuePlayer() {}
 
-    MusicPlayer(final InputStream inputStream) throws JavaLayerException
+    private synchronized int getFileSize(final URL url)
     {
-        this.player = new Player(inputStream);
-        playerStatus = PlayerStatus.NOT_STARTED;
+        try
+        {
+            final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+            connection.setRequestMethod("HEAD");
+            connection.getInputStream();
+            final int fileSize = connection.getContentLength();
+            connection.disconnect();
+            return fileSize;
+        }
+        catch (IOException ex) { throw new RuntimeException(ex); }
     }
 
-    // starts playback. resumes if paused
-    public void play() throws JavaLayerException
+    private synchronized <T> ArrayList<T> shiftLeftBy(ArrayList<T> arrayList, int shiftBy)
     {
-        synchronized (playerLock)
+        for (int i = 0; i < shiftBy; i++)
         {
-            switch (playerStatus)
+            T firstElement = arrayList.get(0);
+            arrayList.remove(firstElement);
+            arrayList.add(firstElement); // taking it out of the front, adding it back to the end
+        }
+        return arrayList;
+    }
+
+    private synchronized Player setUpPlayer(final double skipMultiplier) throws JavaLayerException, IOException
+    {
+        final String songName = Main.tracksQueue.get(0).replaceAll(" ", "%20");
+        final URL url = new URL(Main.rootURL + "AllTracks/" + songName+ ".mp3");
+        final BufferedInputStream inputStream = new BufferedInputStream(url.openStream());
+
+        if (skipMultiplier > 0)
+        {
+            final long framesToSkip = (long) (getFileSize(url) * skipMultiplier);
+            inputStream.skip(framesToSkip);
+        }
+
+        final Player player = new Player(inputStream);
+        return player;
+    }
+
+    private synchronized void playQueueInternal(final double skipMultiplier) throws JavaLayerException, IOException
+    {
+        player = setUpPlayer(skipMultiplier);
+        playerStatus = PlayerStatus.PLAYING;
+        while (playerStatus == PlayerStatus.PLAYING)
+        {
+            if (!player.play(1)) // got to end of song
             {
-                case PlayerStatus.NOT_STARTED:
-                    final Runnable runnable = this::playInternal;
-                    final Thread playerThread = new Thread(runnable);
-                    playerThread.setPriority(Thread.MAX_PRIORITY);
-                    playerStatus = PlayerStatus.PLAYING;
-                    playerThread.start();
-                    break;
-                case PlayerStatus.PAUSED:
-                    resume();
-                    break;
-                default:
-                    break;
+                System.out.println("Reached end of " + Main.tracksQueue.get(0) + "...");
+                Main.tracksQueue = shiftLeftBy(Main.tracksQueue, 1);
+                playQueueInternal(0);
             }
         }
     }
 
-    // pauses playback. returns true if successfully paused
-    void pause()
+    protected synchronized void playQueue()
     {
-        synchronized (playerLock)
+        Runnable queuePlayerRunnable = () ->
         {
-            if (playerStatus == PlayerStatus.PLAYING)
-            {
-                playerStatus = PlayerStatus.PAUSED;
-            }
-        }
+            try { playQueueInternal(0); }
+            catch (JavaLayerException | IOException ex) { throw new RuntimeException(ex); }
+        };
+        Thread queuePlayerThread = new Thread(queuePlayerRunnable);
+        queuePlayerThread.start();
     }
 
-    // resumes playback.returns true if new state is PLAYING
-    void resume()
+    protected synchronized void pauseQueue()
     {
-        synchronized (playerLock)
-        {
-            if (playerStatus == PlayerStatus.PAUSED)
-            {
-                playerStatus = PlayerStatus.PLAYING;
-                playerLock.notifyAll();
-            }
-        }
+        if (playerStatus == PlayerStatus.PLAYING) { playerStatus = PlayerStatus.PAUSED; }
     }
 
-    // stops playback. if not playing, does nothing
-    void stop()
+    protected synchronized void resumeQueue()
     {
-        synchronized (playerLock)
-        {
-            playerStatus = PlayerStatus.FINISHED;
-            playerLock.notifyAll();
-        }
+        if (playerStatus == PlayerStatus.PAUSED) { playerStatus = PlayerStatus.PLAYING; }
     }
 
-    private void playInternal()
+    protected synchronized void skipCurrentTrack(final double skipMultiplier) throws JavaLayerException, IOException
     {
-        while (playerStatus != PlayerStatus.FINISHED)
-        {
-            try
-            {
-                if (!player.play(1))
-                {
-                    break;
-                }
-            }
-            catch (final JavaLayerException ex)
-            {
-                break;
-            }
-
-            // check if paused or terminated
-            synchronized (playerLock)
-            {
-                while (playerStatus == PlayerStatus.PAUSED)
-                {
-                    try { playerLock.wait(); }
-                    catch (final InterruptedException ex) { break; } // terminates player
-                }
-            }
-        }
-        closePlayer();
-    }
-
-    void closePlayer() // closes player, regardless of current state
-    {
-        synchronized (playerLock) { playerStatus = PlayerStatus.FINISHED; }
-        try { player.close(); }
-        catch (final Exception ignored) {  } // we're ending anyway. ignore
+        playerStatus = PlayerStatus.PAUSED;
+        playQueueInternal(skipMultiplier);
     }
 }
