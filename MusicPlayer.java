@@ -14,7 +14,7 @@ class QueuePlayer
 {
     private final Object playerLock = new Object();
     volatile int playerStatus = PlayerStatus.NOT_STARTED;
-    final HashMap<String, Integer> frameCounts = getFrameCounts();
+    private final HashMap<String, Integer> frameCounts = getFrameCounts();
 
     QueuePlayer() {}
 
@@ -52,14 +52,11 @@ class QueuePlayer
         return frameCounts;
     }
 
-    private synchronized <T> ArrayList<T> shiftLeftBy(ArrayList<T> arrayList, int shiftBy)
+    private synchronized <T> ArrayList<T> shiftLeft(ArrayList<T> arrayList)
     {
-        for (int i = 0; i < shiftBy; i++)
-        {
-            T firstElement = arrayList.get(0);
-            arrayList.remove(firstElement);
-            arrayList.add(firstElement); // taking it out of the front, adding it back to the end
-        }
+        T firstElement = arrayList.get(0);
+        arrayList.remove(firstElement);
+        arrayList.add(firstElement);
         return arrayList;
     }
 
@@ -75,8 +72,7 @@ class QueuePlayer
             inputStream.skip(framesToSkip);
         }
 
-        final Player player = new Player(inputStream);
-        return player;
+        return new Player(inputStream);
     }
 
     private synchronized void playQueueInternal(final double skipMultiplier) throws JavaLayerException, IOException
@@ -84,7 +80,7 @@ class QueuePlayer
         final Player player = setUpPlayer(skipMultiplier);
         playerStatus = PlayerStatus.PLAYING;
         boolean isFinished;
-        double framesDone = 0;
+        double framesDone = skipMultiplier * frameCounts.get(Main.tracksQueue.get(0) + ".mp3");
         double progress;
 
         while (playerStatus != PlayerStatus.FINISHED)
@@ -95,7 +91,7 @@ class QueuePlayer
                 if (isFinished)
                 {
                     System.out.println("Reached end of " + Main.tracksQueue.get(0) + "...");
-                    Main.tracksQueue = shiftLeftBy(Main.tracksQueue, 1);
+                    Main.tracksQueue = shiftLeft(Main.tracksQueue);
                     System.out.println("Automatically moving to " + Main.tracksQueue.get(0) + "...");
                     playQueueInternal(0);
                 }
@@ -103,7 +99,6 @@ class QueuePlayer
                 {
                     framesDone++;
                     progress = framesDone / frameCounts.get(Main.tracksQueue.get(0) + ".mp3");
-                    System.out.println(progress);
                     Main.progressBar.setProgress(progress);
                 }
             }
@@ -113,13 +108,13 @@ class QueuePlayer
         Thread.currentThread().interrupt();
     }
 
-    void playNewQueue()
+    void playNewQueue(final double skipMultiplier)
     {
         synchronized (playerLock)
         {
             Runnable queuePlayerRunnable = () ->
             {
-                try { playQueueInternal(0); }
+                try { playQueueInternal(skipMultiplier); }
                 catch (JavaLayerException | IOException ex) { throw new RuntimeException(ex); }
             };
             Thread queuePlayerThread = new Thread(queuePlayerRunnable);
@@ -162,9 +157,9 @@ class QueuePlayer
         }
     }
 
-    synchronized void skipCurrentTrack(final double skipMultiplier) throws JavaLayerException, IOException
+    void skipCurrentTrack(final double skipMultiplier) throws JavaLayerException, IOException
     {
-        stopQueue();
-        playQueueInternal(skipMultiplier); // will automatically be on current track
+        playerStatus = PlayerStatus.FINISHED;
+        playNewQueue(skipMultiplier); // will automatically be on current track
     }
 }
