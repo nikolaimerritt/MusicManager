@@ -28,6 +28,7 @@ public class Main extends Application
     private static int viewMode = ViewMode.MUSIC_OVERVIEW;
     private static final ArrayList<String> tracksArray = getFileNamesAtSite(rootURL + "AllTracks/");
     static ArrayList<String> tracksQueue = tracksArray;
+    static final ProgressBar progressBar = new ProgressBar(0);
 
     @Override
     public void start(Stage primaryStage)
@@ -81,8 +82,7 @@ public class Main extends Application
         GridPane.setConstraints(playPauseBtn, 0, 2, 1, 1);
         grid.getChildren().add(playPauseBtn);
 
-        // defining progress bar. shows % of progress (0-100)
-        final ProgressBar progressBar = new ProgressBar(0);
+        // defining progress bar. shows % of progress. UPDATED AUTOMATICALLY IN MUSICPLAYER.JAVA
         progressBar.setMaxWidth(Double.MAX_VALUE); // making it stretch all the way. this does not conflict with the shuffle button to its right
         GridPane.setConstraints(progressBar, 1, 2, 98, 1);
         grid.getChildren().add(progressBar);
