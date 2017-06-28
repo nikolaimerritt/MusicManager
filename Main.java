@@ -15,10 +15,7 @@ import javafx.scene.control.Button;
 import javafx.event.ActionEvent;
 import javafx.stage.WindowEvent;
 import javafx.scene.control.Slider;
-import java.io.*;
-import java.net.*;
 import java.net.URL;
-import javazoom.jl.decoder.JavaLayerException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.*;
@@ -26,17 +23,18 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
-public class Main extends Application
+public class Main /* extends Application */
 {
-    private static MusicPlayer musicPlayer = null;
+    /*private static QueuePlayer musicPlayer = null;
     private static String songName;
     private static final String rootURL = "http://musicmanager.duckdns.org/";
     private static final HashMap<String, String[]> playlistHashMap = getPlaylistHashMap();
-    private static int viewMode = ViewMode.MUSIC_OVERVIEW;
-    private final ArrayList<String> tracksArray = getFileNamesAtSite(rootURL + "AllTracks/");
-    private final ArrayList<String> tracksQueue = tracksArray;
+    private static int viewMode = ViewMode.MUSIC_OVERVIEW;*/
+    protected static final String rootURL = "http://musicmanager.duckdns.org/";
+    private static final ArrayList<String> tracksArray = getFileNamesAtSite(rootURL + "AllTracks/");
+    protected static ArrayList<String> tracksQueue = tracksArray;
 
-    @Override
+    /*@Override
     public void start(Stage primaryStage)
     {
         GridPane grid = new GridPane();
@@ -200,10 +198,10 @@ public class Main extends Application
         stage.show();
     }
 
-    private String toURL(String toFormat) { return toFormat.replaceAll(" ", "%20"); }
-    private String fromURL(String deformat) { return deformat.replaceAll("%20", " "); }
+    private String toURL(String toFormat) { return toFormat.replaceAll(" ", "%20"); }*/
+    private static String fromURL(String deformat) { return deformat.replaceAll("%20", " "); }
 
-    private ArrayList<String> getFileNamesAtSite(String urlString)
+    private static ArrayList<String> getFileNamesAtSite(String urlString)
     {
         ArrayList<String> songNames = new ArrayList<>();
         Document document;
@@ -217,48 +215,7 @@ public class Main extends Application
         return songNames;
     }
 
-    private int getFileSize(final URL url)
-    {
-        try
-        {
-            final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-
-            connection.setRequestMethod("HEAD");
-            connection.getInputStream();
-            final int fileSize = connection.getContentLength();
-            connection.disconnect();
-            return fileSize;
-        }
-        catch (IOException ex) { throw new RuntimeException(ex); }
-    }
-
-    private void playFromScratch(final double percentToSkip)
-    {
-        final URL url;
-        final BufferedInputStream inputStream;
-        try { url = new URL(rootURL + "AllTracks/" + toURL(songName) + ".mp3"); }
-        catch (MalformedURLException ex) { throw new RuntimeException(ex); }
-
-        try {inputStream = new BufferedInputStream(url.openStream()); }
-        catch (final IOException ex) { throw new RuntimeException(ex); }
-
-        if (percentToSkip > 0)
-        {
-            final long framesToSkip = (long) (getFileSize(url) * percentToSkip);
-            try { inputStream.skip(framesToSkip); }
-            catch (IOException ex) { throw new RuntimeException(ex); }
-        }
-
-        try
-        {
-            musicPlayer = new MusicPlayer(inputStream);
-            musicPlayer.play();
-        }
-        catch (JavaLayerException ex) { throw new RuntimeException(ex); }
-
-    }
-
-    private static HashMap<String, String[]> getPlaylistHashMap()
+    /*private static HashMap<String, String[]> getPlaylistHashMap()
     {
         final URL url;
         final Scanner scanner;
@@ -277,10 +234,12 @@ public class Main extends Application
             playlistHashMap.put(playlistName, itemsInPlaylist);
         }
         return playlistHashMap;
-    }
+    }*/
 
     public static void main(String[] args) throws InterruptedException
     {
-        launch(args);
+        //launch(args);
+        QueuePlayer queuePlayer = new QueuePlayer();
+        queuePlayer.playQueue();
     }
 }
