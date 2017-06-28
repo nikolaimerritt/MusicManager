@@ -83,7 +83,7 @@ public class Main extends Application
         grid.getChildren().add(playPauseBtn);
 
         // defining progress bar. shows % of progress. UPDATED AUTOMATICALLY IN MUSICPLAYER.JAVA
-        progressBar.setMaxWidth(Double.MAX_VALUE); // making it stretch all the way. this does not conflict with the shuffle button to its right
+        progressBar.setMaxWidth(Double.MAX_VALUE); // making it stretch all the way. this does not conflict with the shuffle button 
         progressBar.setOnMouseClicked(event ->
         {
             double fractionXPressed = event.getX() / progressBar.getLayoutBounds().getWidth();
