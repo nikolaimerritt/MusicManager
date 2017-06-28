@@ -6,14 +6,12 @@ import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Scene;
-import javafx.scene.control.ListView;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
-import javafx.scene.control.Button;
 import javafx.event.ActionEvent;
 import javafx.stage.WindowEvent;
-import javafx.scene.control.Slider;
+
 import java.net.URL;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -49,7 +47,7 @@ public class Main extends Application
         });
         Scene scene = new Scene(grid, 300, 300);
         scene.getStylesheets().add(Main.class.getResource("Main.css").toExternalForm());
-        stage.setWidth(580);
+        stage.setWidth(585);
         stage.setHeight(300);
         stage.setScene(scene);
 
@@ -83,13 +81,11 @@ public class Main extends Application
         GridPane.setConstraints(playPauseBtn, 0, 2, 1, 1);
         grid.getChildren().add(playPauseBtn);
 
-        // defining slider <-- will be used later, once Ive got the skip functionality working through a text field first
-        final Slider seekSlider = new Slider();
-        seekSlider.setMin(0);
-        seekSlider.setMax(1);
-        seekSlider.setBlockIncrement(0.01);
-        GridPane.setConstraints(seekSlider, 1, 2, 98, 1);
-        grid.getChildren().add(seekSlider);
+        // defining progress bar. shows % of progress (0-100)
+        final ProgressBar progressBar = new ProgressBar(0);
+        progressBar.setMaxWidth(Double.MAX_VALUE); // making it stretch all the way. this does not conflict with the shuffle button to its right
+        GridPane.setConstraints(progressBar, 1, 2, 98, 1);
+        grid.getChildren().add(progressBar);
 
         // defining files listview
         ListView<String> mainListView = new ListView<>(FXCollections.observableArrayList(tracksArray));
@@ -122,7 +118,6 @@ public class Main extends Application
         stage.show();
     }
 
-    private String toURL(String toFormat) { return toFormat.replaceAll(" ", "%20"); }
     private static String fromURL(String deformat) { return deformat.replaceAll("%20", " "); }
 
     private static ArrayList<String> getFileNamesAtSite(String urlString)
