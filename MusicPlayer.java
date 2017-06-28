@@ -1,6 +1,5 @@
 package sample;
 
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import javazoom.jl.decoder.JavaLayerException;
 import javazoom.jl.player.Player;
 import java.io.BufferedInputStream;
@@ -8,12 +7,14 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Scanner;
 
 class QueuePlayer
 {
-    private Player player = null;
     private final Object playerLock = new Object();
     volatile int playerStatus = PlayerStatus.NOT_STARTED;
+    final HashMap<String, Integer> frameCounts = getFrameCounts();
 
     QueuePlayer() {}
 
@@ -30,6 +31,25 @@ class QueuePlayer
             return fileSize;
         }
         catch (IOException ex) { throw new RuntimeException(ex); }
+    }
+
+    private synchronized HashMap<String, Integer> getFrameCounts()
+    {
+        HashMap<String, Integer> frameCounts = new HashMap<>();
+        try
+        {
+            final URL url = new URL(Main.rootURL + "/Metadata/metadata.txt");
+            final Scanner scanner = new Scanner(url.openStream());
+
+            while (scanner.hasNextLine())
+            {
+                // each line is in format SongName.mp3, FrameCount
+                String[] splitAtComma = scanner.nextLine().split(", ");
+                frameCounts.put(splitAtComma[0], Integer.parseInt(splitAtComma[1]));
+            }
+        }
+        catch (IOException ex) { throw new RuntimeException(ex); }
+        return frameCounts;
     }
 
     private synchronized <T> ArrayList<T> shiftLeftBy(ArrayList<T> arrayList, int shiftBy)
@@ -61,18 +81,30 @@ class QueuePlayer
 
     private synchronized void playQueueInternal(final double skipMultiplier) throws JavaLayerException, IOException
     {
-        player = setUpPlayer(skipMultiplier);
+        final Player player = setUpPlayer(skipMultiplier);
         playerStatus = PlayerStatus.PLAYING;
+        boolean isFinished;
+        double framesDone = 0;
+        double progress;
+
         while (playerStatus != PlayerStatus.FINISHED)
         {
             if (playerStatus == PlayerStatus.PLAYING)
             {
-                if (!player.play(1)) // got to end of song
+                isFinished = !player.play(1);
+                if (isFinished)
                 {
                     System.out.println("Reached end of " + Main.tracksQueue.get(0) + "...");
                     Main.tracksQueue = shiftLeftBy(Main.tracksQueue, 1);
                     System.out.println("Automatically moving to " + Main.tracksQueue.get(0) + "...");
                     playQueueInternal(0);
+                }
+                else
+                {
+                    framesDone++;
+                    progress = framesDone / frameCounts.get(Main.tracksQueue.get(0) + ".mp3");
+                    System.out.println(progress);
+                    Main.progressBar.setProgress(progress);
                 }
             }
         }
