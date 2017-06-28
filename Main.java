@@ -11,11 +11,11 @@ import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.event.ActionEvent;
 import javafx.stage.WindowEvent;
-
 import java.net.URL;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.*;
+import javazoom.jl.decoder.JavaLayerException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -75,7 +75,7 @@ public class Main extends Application
 
                 default: // should be played from scratch
                     System.out.println("Starting " + tracksQueue.get(0) + "from scratch. Skipping 0%");
-                    queuePlayer.playNewQueue();
+                    queuePlayer.playNewQueue(0);
                     break;
             }
         });
@@ -84,6 +84,12 @@ public class Main extends Application
 
         // defining progress bar. shows % of progress. UPDATED AUTOMATICALLY IN MUSICPLAYER.JAVA
         progressBar.setMaxWidth(Double.MAX_VALUE); // making it stretch all the way. this does not conflict with the shuffle button to its right
+        progressBar.setOnMouseClicked(event ->
+        {
+            double fractionXPressed = event.getX() / progressBar.getLayoutBounds().getWidth();
+            try { queuePlayer.skipCurrentTrack(fractionXPressed); }
+            catch (JavaLayerException | IOException ex) { throw new RuntimeException(ex); }
+        });
         GridPane.setConstraints(progressBar, 1, 2, 98, 1);
         grid.getChildren().add(progressBar);
 
