@@ -71,6 +71,7 @@ class QueuePlayer
                 {
                     System.out.println("Reached end of " + Main.tracksQueue.get(0) + "...");
                     Main.tracksQueue = shiftLeftBy(Main.tracksQueue, 1);
+                    System.out.println("Automatically moving to " + Main.tracksQueue.get(0) + "...");
                     playQueueInternal(0);
                 }
             }
