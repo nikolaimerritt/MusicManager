@@ -6,7 +6,6 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 
@@ -52,35 +51,27 @@ class QueuePlayer
         return frameCounts;
     }
 
-    private synchronized <T> ArrayList<T> shiftLeft(ArrayList<T> arrayList)
-    {
-        T firstElement = arrayList.get(0);
-        arrayList.remove(firstElement);
-        arrayList.add(firstElement);
-        return arrayList;
-    }
-
-    private synchronized Player setUpPlayer(final double skipMultiplier) throws JavaLayerException, IOException
+    private synchronized Player setUpPlayer(final double seekMultiplier) throws JavaLayerException, IOException
     {
         final String songName = Main.tracksQueue.get(0).replaceAll(" ", "%20");
         final URL url = new URL(Main.rootURL + "AllTracks/" + songName+ ".mp3");
         final BufferedInputStream inputStream = new BufferedInputStream(url.openStream());
 
-        if (skipMultiplier > 0)
+        if (seekMultiplier > 0)
         {
-            final long framesToSkip = (long) (getFileSize(url) * skipMultiplier);
+            final long framesToSkip = (long) (getFileSize(url) * seekMultiplier);
             inputStream.skip(framesToSkip);
         }
 
         return new Player(inputStream);
     }
 
-    private synchronized void playQueueInternal(final double skipMultiplier) throws JavaLayerException, IOException
+    private synchronized void playQueueInternal(final double seekMultiplier) throws JavaLayerException, IOException
     {
-        final Player player = setUpPlayer(skipMultiplier);
+        final Player player = setUpPlayer(seekMultiplier);
         playerStatus = PlayerStatus.PLAYING;
         boolean isFinished;
-        double framesDone = skipMultiplier * frameCounts.get(Main.tracksQueue.get(0) + ".mp3");
+        double framesDone = seekMultiplier * frameCounts.get(Main.tracksQueue.get(0) + ".mp3");
         double progress;
 
         while (playerStatus != PlayerStatus.FINISHED)
@@ -91,7 +82,7 @@ class QueuePlayer
                 if (isFinished)
                 {
                     System.out.println("Reached end of " + Main.tracksQueue.get(0) + "...");
-                    Main.tracksQueue = shiftLeft(Main.tracksQueue);
+                    Main.tracksQueue = Main.shiftLeft(Main.tracksQueue);
                     Main.updateMainListView = true;
                     System.out.println("Automatically moving to " + Main.tracksQueue.get(0) + "...");
                     playQueueInternal(0);
@@ -109,13 +100,13 @@ class QueuePlayer
         Thread.currentThread().interrupt();
     }
 
-    void playNewQueue(final double skipMultiplier)
+    void playNewQueue(final double seekMultiplier)
     {
         synchronized (playerLock)
         {
             Runnable queuePlayerRunnable = () ->
             {
-                try { playQueueInternal(skipMultiplier); }
+                try { playQueueInternal(seekMultiplier); }
                 catch (JavaLayerException | IOException ex) { throw new RuntimeException(ex); }
             };
             Thread queuePlayerThread = new Thread(queuePlayerRunnable);
@@ -158,9 +149,9 @@ class QueuePlayer
         }
     }
 
-    void skipCurrentTrack(final double skipMultiplier) throws JavaLayerException, IOException
+    void seekCurrentTrack(final double seekMultiplier) throws JavaLayerException, IOException
     {
         playerStatus = PlayerStatus.FINISHED;
-        playNewQueue(skipMultiplier); // will automatically be on current track
+        playNewQueue(seekMultiplier); // will automatically be on current track
     }
 }
