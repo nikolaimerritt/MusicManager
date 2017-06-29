@@ -88,7 +88,7 @@ public class Main extends Application
         progressBar.setOnMouseClicked(event ->
         {
             double fractionXPressed = event.getX() / progressBar.getLayoutBounds().getWidth();
-            try { queuePlayer.skipCurrentTrack(fractionXPressed); }
+            try { queuePlayer.seekCurrentTrack(fractionXPressed); }
             catch (JavaLayerException | IOException ex) { throw new RuntimeException(ex); }
         });
         GridPane.setConstraints(progressBar, 1, 2, 98, 1);
@@ -97,6 +97,16 @@ public class Main extends Application
         // defining files listview
         ListView<String> mainListView = new ListView<>(FXCollections.observableArrayList(tracksQueue));
         mainListView.setOrientation(Orientation.VERTICAL);
+        mainListView.setOnMouseClicked(event ->
+        {
+            queuePlayer.stopQueue();
+            String desiredSongName = mainListView.getSelectionModel().getSelectedItem();
+            while (!tracksQueue.get(0).equals(desiredSongName))
+            {
+                tracksQueue = shiftLeft(tracksQueue);
+            }
+            queuePlayer.playNewQueue(0);
+        });
         GridPane.setConstraints(mainListView, 0, 1, 100, 1);
         grid.getChildren().add(mainListView);
 
@@ -152,6 +162,14 @@ public class Main extends Application
     }
 
     private static String fromURL(String deformat) { return deformat.replaceAll("%20", " "); }
+
+    static <T> ArrayList<T> shiftLeft(ArrayList<T> arrayList)
+    {
+        T firstElement = arrayList.get(0);
+        arrayList.remove(firstElement);
+        arrayList.add(firstElement);
+        return arrayList;
+    }
 
     private static ArrayList<String> getFileNamesAtSite(String urlString)
     {
