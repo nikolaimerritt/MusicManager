@@ -117,10 +117,7 @@ public class Main extends Application
             {
                 if (updateMainListView)
                 {
-                    Platform.runLater(() ->
-                    {
-                        mainListView.setItems(FXCollections.observableArrayList(tracksQueue));
-                    });
+                    Platform.runLater(() -> mainListView.setItems(FXCollections.observableArrayList(tracksQueue)));
                     updateMainListView = false;
                 }
             }
@@ -144,6 +141,22 @@ public class Main extends Application
 
         // defining viewPlaylists button
         final Button viewPlaylistsButton = new Button("≡");
+        viewPlaylistsButton.setOnAction(event ->
+        {
+            switch (viewMode)
+            {
+                case ViewMode.MUSIC_OVERVIEW: // should be PLAYLIST_OVERVIEW
+                    viewMode = ViewMode.PLAYLIST_OVERVIEW;
+                    final ArrayList<String> playlistNames = new ArrayList<>(playlistHashMap.keySet());
+                    mainListView.setItems(FXCollections.observableArrayList(playlistNames));
+                    break;
+
+                default: // should be MUSIC_OVERVIEW
+                    viewMode = ViewMode.MUSIC_OVERVIEW;
+                    mainListView.setItems(FXCollections.observableArrayList(tracksQueue));
+                    break;
+            }
+        });
         GridPane.setConstraints(viewPlaylistsButton, 0, 0);
         grid.getChildren().add(viewPlaylistsButton);
 
