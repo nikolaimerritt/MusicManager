@@ -27,7 +27,7 @@ public class Main extends Application
     private static final HashMap<String, String[]> playlistHashMap = getPlaylistHashMap();
     private static int viewMode = ViewMode.MUSIC_OVERVIEW;
     private static final ArrayList<String> allTracks = getFileNamesAtSite(rootURL + "AllTracks/");
-    static ArrayList<String> tracksQueue = allTracks;
+    static ArrayList<String> trackQueue = allTracks;
     static final ProgressBar progressBar = new ProgressBar(0);
     static volatile boolean updateMainListView = false;
 
@@ -65,17 +65,17 @@ public class Main extends Application
             switch (queuePlayer.playerStatus)
             {
                 case PlayerStatus.PLAYING: // should be paused
-                    System.out.println("Pausing " + tracksQueue.get(0) + "...");
+                    System.out.println("Pausing " + trackQueue.get(0) + "...");
                     queuePlayer.pauseQueue();
                     break;
 
                 case PlayerStatus.PAUSED: // should be played
-                    System.out.println("Resuming " + tracksQueue.get(0) + " from paused...");
+                    System.out.println("Resuming " + trackQueue.get(0) + " from paused...");
                     queuePlayer.resumeQueue();
                     break;
 
                 default: // should be played from scratch
-                    System.out.println("Starting " + tracksQueue.get(0) + "from scratch. Skipping 0%");
+                    System.out.println("Starting " + trackQueue.get(0) + "from scratch. Skipping 0%");
                     queuePlayer.playNewQueue(0);
                     break;
             }
@@ -95,15 +95,15 @@ public class Main extends Application
         grid.getChildren().add(progressBar);
 
         // defining files listview
-        ListView<String> mainListView = new ListView<>(FXCollections.observableArrayList(tracksQueue));
+        ListView<String> mainListView = new ListView<>(FXCollections.observableArrayList(trackQueue));
         mainListView.setOrientation(Orientation.VERTICAL);
         mainListView.setOnMouseClicked(event ->
         {
             queuePlayer.stopQueue();
             String desiredSongName = mainListView.getSelectionModel().getSelectedItem();
-            while (!tracksQueue.get(0).equals(desiredSongName))
+            while (!trackQueue.get(0).equals(desiredSongName))
             {
-                tracksQueue = shiftLeft(tracksQueue);
+                trackQueue = shiftLeft(trackQueue);
             }
             queuePlayer.playNewQueue(0);
         });
@@ -117,7 +117,7 @@ public class Main extends Application
             {
                 if (updateMainListView)
                 {
-                    Platform.runLater(() -> mainListView.setItems(FXCollections.observableArrayList(tracksQueue)));
+                    Platform.runLater(() -> mainListView.setItems(FXCollections.observableArrayList(trackQueue)));
                     updateMainListView = false;
                 }
             }
@@ -153,7 +153,7 @@ public class Main extends Application
 
                 default: // should be MUSIC_OVERVIEW
                     viewMode = ViewMode.MUSIC_OVERVIEW;
-                    mainListView.setItems(FXCollections.observableArrayList(tracksQueue));
+                    mainListView.setItems(FXCollections.observableArrayList(allTracks));
                     break;
             }
         });
@@ -162,6 +162,26 @@ public class Main extends Application
 
         // defining add button
         final Button addButton = new Button("✎");
+        addButton.setOnAction(event ->
+        {
+            switch (viewMode)
+            {
+                case ViewMode.MUSIC_OVERVIEW: // should make new window which allows adding, removing and renaming tracks
+                    viewMode = ViewMode.EDIT_MUISC;
+                    System.out.println("Edit music mode");
+                    break;
+
+                case ViewMode.PLAYLIST_OVERVIEW: // should make new window which allows adding, removing and renaming playlists
+                    viewMode = ViewMode.EDIT_PLAYLISTS;
+                    System.out.println("Edit playlists mode");
+                    break;
+                    
+                default: // go back to normal view
+                    viewMode = ViewMode.MUSIC_OVERVIEW;
+                    System.out.println("Music overview mode");
+                    break;
+            }
+        });
         GridPane.setConstraints(addButton, 99, 0);
         grid.getChildren().add(addButton);
 
