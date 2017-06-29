@@ -29,6 +29,7 @@ public class Main extends Application
     private static final ArrayList<String> tracksArray = getFileNamesAtSite(rootURL + "AllTracks/");
     static ArrayList<String> tracksQueue = tracksArray;
     static final ProgressBar progressBar = new ProgressBar(0);
+    static volatile boolean updateMainListView = false;
 
     @Override
     public void start(Stage primaryStage)
@@ -83,7 +84,7 @@ public class Main extends Application
         grid.getChildren().add(playPauseBtn);
 
         // defining progress bar. shows % of progress. UPDATED AUTOMATICALLY IN MUSICPLAYER.JAVA
-        progressBar.setMaxWidth(Double.MAX_VALUE); // making it stretch all the way. this does not conflict with the shuffle button 
+        progressBar.setMaxWidth(Double.MAX_VALUE); // making it stretch all the way. this does not conflict with the shuffle button
         progressBar.setOnMouseClicked(event ->
         {
             double fractionXPressed = event.getX() / progressBar.getLayoutBounds().getWidth();
@@ -94,10 +95,27 @@ public class Main extends Application
         grid.getChildren().add(progressBar);
 
         // defining files listview
-        ListView<String> mainListView = new ListView<>(FXCollections.observableArrayList(tracksArray));
+        ListView<String> mainListView = new ListView<>(FXCollections.observableArrayList(tracksQueue));
         mainListView.setOrientation(Orientation.VERTICAL);
         GridPane.setConstraints(mainListView, 0, 1, 100, 1);
         grid.getChildren().add(mainListView);
+
+        // defining thread to update listview
+        Thread updateListViewThread = new Thread(() ->
+        {
+            while (true)
+            {
+                if (updateMainListView)
+                {
+                    Platform.runLater(() ->
+                    {
+                        mainListView.setItems(FXCollections.observableArrayList(tracksQueue));
+                    });
+                    updateMainListView = false;
+                }
+            }
+        });
+        updateListViewThread.start();
 
         // defining search box
         final TextField searchField = new TextField();
