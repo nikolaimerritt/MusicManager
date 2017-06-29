@@ -26,8 +26,8 @@ public class Main extends Application
     static final String rootURL = "http://musicmanager.duckdns.org/";
     private static final HashMap<String, String[]> playlistHashMap = getPlaylistHashMap();
     private static int viewMode = ViewMode.MUSIC_OVERVIEW;
-    private static final ArrayList<String> tracksArray = getFileNamesAtSite(rootURL + "AllTracks/");
-    static ArrayList<String> tracksQueue = tracksArray;
+    private static final ArrayList<String> allTracks = getFileNamesAtSite(rootURL + "AllTracks/");
+    static ArrayList<String> tracksQueue = allTracks;
     static final ProgressBar progressBar = new ProgressBar(0);
     static volatile boolean updateMainListView = false;
 
@@ -100,7 +100,7 @@ public class Main extends Application
         GridPane.setConstraints(mainListView, 0, 1, 100, 1);
         grid.getChildren().add(mainListView);
 
-        // defining thread to update listview
+        // defining thread to auto-update mainListView
         Thread updateListViewThread = new Thread(() ->
         {
             while (true)
@@ -120,6 +120,15 @@ public class Main extends Application
         // defining search box
         final TextField searchField = new TextField();
         searchField.setPromptText("⚲");
+        searchField.textProperty().addListener((observable, oldValue, newValue) -> 
+        {
+           String searchText = newValue.toLowerCase();
+           mainListView.getItems().clear();
+           allTracks.forEach((trackName ->
+           {
+               if (trackName.toLowerCase().contains(searchText)) { mainListView.getItems().add(trackName); }
+           }));
+        });
         GridPane.setConstraints(searchField, 1, 0,98, 1);
         grid.getChildren().add(searchField);
 
