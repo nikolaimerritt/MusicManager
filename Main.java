@@ -198,6 +198,16 @@ public class Main extends Application
 
         // defining shuffle button
         final Button shuffleButton = new Button("\uD83D\uDD00"); // shuffle unicode character
+        shuffleButton.setOnAction(event ->
+        {
+            String currentTrack = trackQueue.get(0);
+            Collections.shuffle(trackQueue);
+            while (!trackQueue.get(0).equals(currentTrack)) // making current track be at front of shuffled queue
+            {
+                trackQueue = shiftLeft(trackQueue);
+            }
+            mainListView.setItems(FXCollections.observableArrayList(trackQueue));
+        });
         GridPane.setConstraints(shuffleButton, 99, 2);
         grid.getChildren().add(shuffleButton);
 
