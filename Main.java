@@ -99,13 +99,24 @@ public class Main extends Application
         mainListView.setOrientation(Orientation.VERTICAL);
         mainListView.setOnMouseClicked(event ->
         {
-            queuePlayer.stopQueue();
-            String desiredSongName = mainListView.getSelectionModel().getSelectedItem();
-            while (!trackQueue.get(0).equals(desiredSongName))
+            String selectedItem = mainListView.getSelectionModel().getSelectedItem();
+            switch(viewMode)
             {
-                trackQueue = shiftLeft(trackQueue);
+                case ViewMode.MUSIC_OVERVIEW:
+                    queuePlayer.stopQueue();
+                    while (!trackQueue.get(0).equals(selectedItem))
+                    {
+                        trackQueue = shiftLeft(trackQueue);
+                    }
+                    queuePlayer.playNewQueue(0);
+                    break;
+
+                case ViewMode.PLAYLIST_OVERVIEW:
+                    showEditSinglePlaylistScene(selectedItem);
+                    break;
+
+                default: break;
             }
-            queuePlayer.playNewQueue(0);
         });
         GridPane.setConstraints(mainListView, 0, 1, 100, 1);
         grid.getChildren().add(mainListView);
@@ -167,15 +178,15 @@ public class Main extends Application
             switch (viewMode)
             {
                 case ViewMode.MUSIC_OVERVIEW: // should make new window which allows adding, removing and renaming tracks
-                    viewMode = ViewMode.EDIT_MUISC;
                     System.out.println("Edit music mode");
+                    showEditMusicScene();
                     break;
 
                 case ViewMode.PLAYLIST_OVERVIEW: // should make new window which allows adding, removing and renaming playlists
-                    viewMode = ViewMode.EDIT_PLAYLISTS;
                     System.out.println("Edit playlists mode");
+                    showEditAllPlaylistsScene();
                     break;
-                    
+
                 default: // go back to normal view
                     viewMode = ViewMode.MUSIC_OVERVIEW;
                     System.out.println("Music overview mode");
@@ -192,6 +203,75 @@ public class Main extends Application
 
         // finally making stage visible
         stage.show();
+    }
+
+    private void showEditMusicScene()
+    {
+        Stage editMusicStage = new Stage();
+        GridPane editMusicGrid = new GridPane();
+
+        editMusicStage.setTitle("Edit Music");
+        editMusicStage.setResizable(true);
+        editMusicStage.setOnCloseRequest((WindowEvent event) -> editMusicStage.hide());
+        Scene editMusicScene = new Scene(editMusicGrid);
+        editMusicScene.getStylesheets().add(Main.class.getResource("Main.css").toExternalForm());
+        editMusicStage.setWidth(550);
+        editMusicStage.setHeight(300);
+        editMusicStage.setScene(editMusicScene);
+
+        // setting up GridPane controller
+        editMusicGrid.setPadding(new Insets(10, 10, 10, 10));
+        editMusicGrid.setVgap(5);
+        editMusicGrid.setHgap(5);
+
+        // finally showing editMusicStage
+        editMusicStage.show();
+    }
+
+    private void showEditAllPlaylistsScene()
+    {
+        Stage editPlaylistStage = new Stage();
+        GridPane editPlaylistGrid = new GridPane();
+
+        editPlaylistStage.setTitle("Edit Playlists");
+        editPlaylistStage.setResizable(true);
+        editPlaylistStage.setOnCloseRequest((WindowEvent event) -> editPlaylistStage.hide());
+        Scene editPlaylistsScene = new Scene(editPlaylistGrid);
+        editPlaylistsScene.getStylesheets().add(Main.class.getResource("Main.css").toExternalForm());
+        editPlaylistStage.setWidth(550);
+        editPlaylistStage.setHeight(300);
+        editPlaylistStage.setScene(editPlaylistsScene);
+
+        // setting up GridPane controller
+        editPlaylistGrid.setPadding(new Insets(10, 10, 10, 10));
+        editPlaylistGrid.setVgap(5);
+        editPlaylistGrid.setHgap(5);
+
+        // finally showing editMusicStage
+        editPlaylistStage.show();
+    }
+
+    private void showEditSinglePlaylistScene(String playlistName)
+    {
+        Stage editPlaylistStage = new Stage();
+        GridPane editPlaylistGrid = new GridPane();
+
+        editPlaylistStage.setTitle("Edit Playlist: " + playlistName);
+        editPlaylistStage.setResizable(true);
+        editPlaylistStage.setOnCloseRequest((WindowEvent event) -> editPlaylistStage.hide());
+        Scene editPlaylistScene = new Scene(editPlaylistGrid);
+        editPlaylistScene.getStylesheets().add(Main.class.getResource("Main.css").toExternalForm());
+        editPlaylistStage.setWidth(550);
+        editPlaylistStage.setHeight(300);
+        editPlaylistStage.setScene(editPlaylistScene);
+
+        // setting up GridPane controller
+        editPlaylistGrid.setPadding(new Insets(10, 10, 10, 10));
+        editPlaylistGrid.setVgap(5);
+        editPlaylistGrid.setHgap(5);
+
+        // finally showing editMusicStage
+        editPlaylistStage.show();
     }
 
     private static String fromURL(String deformat) { return deformat.replaceAll("%20", " "); }
