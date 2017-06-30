@@ -12,15 +12,15 @@ import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.event.ActionEvent;
 import javafx.stage.WindowEvent;
-
-import java.io.BufferedInputStream;
+import javafx.scene.control.ButtonType;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.lang.reflect.Array;
 import java.net.URL;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.*;
+import java.util.stream.Collectors;
+
 import javazoom.jl.decoder.JavaLayerException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -256,7 +256,11 @@ public class Main extends Application
 
         editPlaylistStage.setTitle("Edit Playlists");
         editPlaylistStage.setResizable(true);
-        editPlaylistStage.setOnCloseRequest((WindowEvent event) -> editPlaylistStage.hide());
+        editPlaylistStage.setOnCloseRequest(event ->
+        {
+            saveAllPlaylists();
+            editPlaylistStage.hide();
+        });
         Scene editPlaylistsScene = new Scene(editPlaylistGrid);
         editPlaylistsScene.getStylesheets().add(Main.class.getResource("Main.css").toExternalForm());
         editPlaylistStage.setWidth(550);
@@ -269,7 +273,7 @@ public class Main extends Application
         editPlaylistGrid.setHgap(5);
 
         // setting up new playlist name textfield
-        final TextField nameTextField = new TextField("");
+        final TextField nameTextField = new TextField();
         nameTextField.setPromptText("New playlist name: ");
         GridPane.setConstraints(nameTextField, 1, 0, 93,1);
         editPlaylistGrid.getChildren().add(nameTextField);
@@ -288,9 +292,22 @@ public class Main extends Application
 
         // setting up remove playlist button
         final Button removeButton = new Button("--");
+        removeButton.setOnAction(event ->
+        {
+            String playlistToRemove = allPlaylistsListView.getSelectionModel().getSelectedItem();
+            if (playlistToRemove != null)
+            {
+                final Alert deleteAlert = new Alert(Alert.AlertType.CONFIRMATION, "bruh u sure bout deletin " + playlistToRemove + "???", ButtonType.YES, ButtonType.NO, ButtonType.CANCEL);
+                deleteAlert.showAndWait();
+                if (deleteAlert.getResult() == ButtonType.YES)
+                {
+                    playlistHashMap.remove(playlistToRemove);
+                    allPlaylistNames.remove(playlistToRemove);
+                }
+            }
+        });
         GridPane.setConstraints(removeButton, 0, 0);
         editPlaylistGrid.getChildren().add(removeButton);
-
 
         // finally showing editMusicStage
         editPlaylistStage.show();
@@ -306,25 +323,9 @@ public class Main extends Application
         editPlaylistStage.setResizable(true);
         editPlaylistStage.setOnCloseRequest(event ->
         {
-            // saving all playlists to file, with updates. each line in format: playlistName:song1.mp3;song2.mp3;song3.mp3 ...
-            String writeInFile = "";
-            for (Object objectEntry : playlistHashMap.entrySet())
-            {
-                final Map.Entry item = (Map.Entry) objectEntry;
-                final ObservableList<String> currentPlaylistContents;
-                final String currentPlaylistName = (String) item.getKey();
-                if (item.getKey() == playlistName) { currentPlaylistContents = playlistTracks; }
-                else { currentPlaylistContents = FXCollections.observableArrayList((ArrayList<String>) item.getValue()); } // <3 <3 <3
-
-                writeInFile += currentPlaylistName + ":";
-                for (int i = 0; i < currentPlaylistContents.size(); i++)
-                {
-                    writeInFile += currentPlaylistContents.get(i);
-                    writeInFile += ((i + 1 == currentPlaylistContents.size()) ? "\n" : ";");
-                }
-                final byte[] password = new byte[]{(byte) 0x65, (byte) 0x6e, (byte) 0x75, (byte) 0x6d, (byte) 0x61, (byte) 0x45, (byte) 0x6c, (byte) 0x69, (byte) 0x5f, (byte) 0x73};
-                sftpWriter("www.musicmanager.duckdns.org", "pi", password, "/var/www/html/Playlists/playlist.txt", writeInFile);
-            }
+            playlistHashMap.remove(playlistName);
+            playlistHashMap.put(playlistName, new ArrayList<>(playlistTracks));
+            saveAllPlaylists();
             editPlaylistStage.hide();
         });
         Scene editPlaylistScene = new Scene(editPlaylistGrid);
@@ -385,6 +386,25 @@ public class Main extends Application
 
         // finally showing editMusicStage
         editPlaylistStage.show();
+    }
+
+    private void saveAllPlaylists()
+    {
+        // saving all playlists to file, with updates. each line in format: playlistName:song1.mp3;song2.mp3;song3.mp3 ...
+        String writeInFile = "";
+        for (Object objectEntry : playlistHashMap.entrySet())
+        {
+            final Map.Entry item = (Map.Entry) objectEntry;
+            final ArrayList<String> currentPlaylistContents = (ArrayList<String>) item.getValue();
+            writeInFile += item.getKey() + ":";
+            for (int i = 0; i < currentPlaylistContents.size(); i++)
+            {
+                writeInFile += currentPlaylistContents.get(i);
+                writeInFile += ((i + 1 == currentPlaylistContents.size()) ? "\n" : ";");
+            }
+            final byte[] password = new byte[]{(byte) 0x65, (byte) 0x6e, (byte) 0x75, (byte) 0x6d, (byte) 0x61, (byte) 0x45, (byte) 0x6c, (byte) 0x69, (byte) 0x5f, (byte) 0x73};
+            sftpWriter("www.musicmanager.duckdns.org", "pi", password, "/var/www/html/Playlists/playlist.txt", writeInFile);
+        }
     }
 
     private static String fromURL(String deformat) { return deformat.replaceAll("%20", " "); }
