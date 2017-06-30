@@ -101,8 +101,8 @@ public class Main extends Application
         GridPane.setConstraints(progressBar, 1, 2, 98, 1);
         grid.getChildren().add(progressBar);
 
-        // defining files listview
-        ListView<String> mainListView = new ListView<>(FXCollections.observableArrayList(trackQueue));
+        // defining main listview
+        final ListView<String> mainListView = new ListView<>(FXCollections.observableArrayList(trackQueue));
         mainListView.setOrientation(Orientation.VERTICAL);
         mainListView.setOnMouseClicked(event ->
         {
@@ -121,7 +121,11 @@ public class Main extends Application
                         break;
 
                     case ViewMode.PLAYLIST_OVERVIEW:
-                        showEditSinglePlaylistScene(selectedItem);
+                        queuePlayer.stopQueue();
+                        trackQueue = playlistHashMap.get(selectedItem);
+                        mainListView.setItems(FXCollections.observableArrayList(trackQueue));
+                        queuePlayer.playNewQueue(0);
+                        //showEditSinglePlaylistScene(selectedItem);
                         break;
 
                     default: break;
@@ -183,8 +187,8 @@ public class Main extends Application
         grid.getChildren().add(viewPlaylistsButton);
 
         // defining add button
-        final Button addButton = new Button("✎");
-        addButton.setOnAction(event ->
+        final Button editButton = new Button("✎");
+        editButton.setOnAction(event ->
         {
             switch (viewMode)
             {
@@ -204,8 +208,8 @@ public class Main extends Application
                     break;
             }
         });
-        GridPane.setConstraints(addButton, 99, 0);
-        grid.getChildren().add(addButton);
+        GridPane.setConstraints(editButton, 99, 0);
+        grid.getChildren().add(editButton);
 
         // defining shuffle button
         final Button shuffleButton = new Button("\uD83D\uDD00"); // shuffle unicode character
@@ -253,12 +257,15 @@ public class Main extends Application
     {
         Stage editPlaylistStage = new Stage();
         GridPane editPlaylistGrid = new GridPane();
+        ObservableList<String> allPlaylistNames = FXCollections.observableArrayList(new ArrayList<>(playlistHashMap.keySet()));
 
         editPlaylistStage.setTitle("Edit Playlists");
         editPlaylistStage.setResizable(true);
         editPlaylistStage.setOnCloseRequest(event ->
         {
-            saveAllPlaylists();
+            final Alert saveAlert = new Alert(Alert.AlertType.CONFIRMATION, "save dis shit bruh????", ButtonType.YES, ButtonType.NO, ButtonType.CANCEL);
+            saveAlert.showAndWait();
+            if (saveAlert.getResult() == ButtonType.YES) { saveAllPlaylists(); }
             editPlaylistStage.hide();
         });
         Scene editPlaylistsScene = new Scene(editPlaylistGrid);
@@ -280,11 +287,21 @@ public class Main extends Application
 
         // setting up add new playlist button
         final Button addButton = new Button("+");
+        addButton.setOnAction(event ->
+        {
+            final String newPlaylistName = nameTextField.getText();
+            if (newPlaylistName != null && !newPlaylistName.equals("") && !playlistHashMap.keySet().contains(newPlaylistName))
+            {
+                playlistHashMap.put(newPlaylistName, new ArrayList<>());
+                allPlaylistNames.add(newPlaylistName);
+                Collections.sort(allPlaylistNames);
+                showEditSinglePlaylistScene(newPlaylistName);
+            }
+        });
         GridPane.setConstraints(addButton, 94, 0);
         editPlaylistGrid.getChildren().add(addButton);
 
         // setting up all playlists listview
-        ObservableList<String> allPlaylistNames = FXCollections.observableArrayList(new ArrayList<>(playlistHashMap.keySet()));
         Collections.sort(allPlaylistNames);
         ListView<String> allPlaylistsListView = new ListView<>(allPlaylistNames);
         GridPane.setConstraints(allPlaylistsListView, 0, 1, 95, 4);
@@ -294,7 +311,7 @@ public class Main extends Application
         final Button removeButton = new Button("--");
         removeButton.setOnAction(event ->
         {
-            String playlistToRemove = allPlaylistsListView.getSelectionModel().getSelectedItem();
+            final String playlistToRemove = allPlaylistsListView.getSelectionModel().getSelectedItem();
             if (playlistToRemove != null)
             {
                 final Alert deleteAlert = new Alert(Alert.AlertType.CONFIRMATION, "bruh u sure bout deletin " + playlistToRemove + "???", ButtonType.YES, ButtonType.NO, ButtonType.CANCEL);
@@ -323,9 +340,14 @@ public class Main extends Application
         editPlaylistStage.setResizable(true);
         editPlaylistStage.setOnCloseRequest(event ->
         {
-            playlistHashMap.remove(playlistName);
-            playlistHashMap.put(playlistName, new ArrayList<>(playlistTracks));
-            saveAllPlaylists();
+            final Alert saveAlert = new Alert(Alert.AlertType.CONFIRMATION, "save dis shit bruh????", ButtonType.YES, ButtonType.NO, ButtonType.CANCEL);
+            saveAlert.showAndWait();
+            if (saveAlert.getResult() == ButtonType.YES)
+            {
+                playlistHashMap.remove(playlistName);
+                playlistHashMap.put(playlistName, new ArrayList<>(playlistTracks));
+                saveAllPlaylists();
+            }
             editPlaylistStage.hide();
         });
         Scene editPlaylistScene = new Scene(editPlaylistGrid);
