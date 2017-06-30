@@ -13,6 +13,7 @@ import javafx.stage.Stage;
 import javafx.event.ActionEvent;
 import javafx.stage.WindowEvent;
 
+import java.io.BufferedInputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.lang.reflect.Array;
@@ -266,6 +267,26 @@ public class Main extends Application
         editPlaylistGrid.setPadding(new Insets(10, 10, 10, 10));
         editPlaylistGrid.setVgap(5);
         editPlaylistGrid.setHgap(5);
+
+        // setting up new playlist name textfield
+        final TextField nameTextField = new TextField("");
+        nameTextField.setPromptText("New playlist name: ");
+        GridPane.setConstraints(nameTextField, 0, 0, 100,1);
+        editPlaylistGrid.getChildren().add(nameTextField);
+
+        // setting up add new playlist button
+        final Button addButton = new Button("+");
+        GridPane.setConstraints(addButton, 101, 0);
+        editPlaylistGrid.getChildren().add(addButton);
+
+        // setting up all playlists listview
+        ObservableList<String> allPlaylistNames = FXCollections.observableArrayList(new ArrayList<>(playlistHashMap.keySet()));
+        Collections.sort(allPlaylistNames);
+        ListView<String> allPlaylistsListView = new ListView<>(allPlaylistNames);
+        GridPane.setConstraints(allPlaylistsListView, 0, 1, 107, 4);
+        editPlaylistGrid.getChildren().add(allPlaylistsListView);
+
+
 
         // finally showing editMusicStage
         editPlaylistStage.show();
