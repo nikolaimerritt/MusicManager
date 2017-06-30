@@ -271,21 +271,25 @@ public class Main extends Application
         // setting up new playlist name textfield
         final TextField nameTextField = new TextField("");
         nameTextField.setPromptText("New playlist name: ");
-        GridPane.setConstraints(nameTextField, 0, 0, 100,1);
+        GridPane.setConstraints(nameTextField, 1, 0, 93,1);
         editPlaylistGrid.getChildren().add(nameTextField);
 
         // setting up add new playlist button
         final Button addButton = new Button("+");
-        GridPane.setConstraints(addButton, 101, 0);
+        GridPane.setConstraints(addButton, 94, 0);
         editPlaylistGrid.getChildren().add(addButton);
 
         // setting up all playlists listview
         ObservableList<String> allPlaylistNames = FXCollections.observableArrayList(new ArrayList<>(playlistHashMap.keySet()));
         Collections.sort(allPlaylistNames);
         ListView<String> allPlaylistsListView = new ListView<>(allPlaylistNames);
-        GridPane.setConstraints(allPlaylistsListView, 0, 1, 107, 4);
+        GridPane.setConstraints(allPlaylistsListView, 0, 1, 95, 4);
         editPlaylistGrid.getChildren().add(allPlaylistsListView);
 
+        // setting up remove playlist button
+        final Button removeButton = new Button("--");
+        GridPane.setConstraints(removeButton, 0, 0);
+        editPlaylistGrid.getChildren().add(removeButton);
 
 
         // finally showing editMusicStage
