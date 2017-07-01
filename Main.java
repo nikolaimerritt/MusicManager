@@ -152,14 +152,14 @@ public class Main extends Application
         // defining search box
         final TextField searchField = new TextField();
         searchField.setPromptText("⚲");
-        searchField.textProperty().addListener((observable, oldValue, newValue) -> 
+        searchField.textProperty().addListener((observable, oldValue, newValue) ->
         {
-           String searchText = newValue.toLowerCase();
-           mainListView.getItems().clear();
-           allTracks.forEach((trackName ->
-           {
-               if (trackName.toLowerCase().contains(searchText)) { mainListView.getItems().add(trackName); }
-           }));
+            String searchText = newValue.toLowerCase();
+            mainListView.getItems().clear();
+            allTracks.forEach((trackName ->
+            {
+                if (trackName.toLowerCase().contains(searchText)) { mainListView.getItems().add(trackName); }
+            }));
         });
         GridPane.setConstraints(searchField, 1, 0,98, 1);
         grid.getChildren().add(searchField);
@@ -245,7 +245,8 @@ public class Main extends Application
             saveAlert.showAndWait();
             if (saveAlert.getResult() == ButtonType.YES)
             {
-                uploadFilesToServer(songPathsToUpload, "/var/www/html/AllTracks/");
+                if (songPathsToUpload.size() != 0) { uploadFilesToServer(songPathsToUpload, "/var/www/html/AllTracks/"); }
+                if (songNamesToRemove.size() != 0) { removeFilesFromServer(songNamesToRemove, "/var/www/html/AllTracks/"); }
             }
             editMusicStage.hide();
         });
@@ -275,7 +276,12 @@ public class Main extends Application
             tracksListView.getItems().clear();
             allTracks.forEach((trackName ->
             {
-                if (trackName.toLowerCase().contains(searchText) && true) { tracksListView.getItems().add(trackName); } // added that so stupid IntelliJ doesnt flag up duplicate code, when really, adding this as a function would make little difference given how many parameters it'd need to be passed
+                if (trackName.toLowerCase().contains(searchText) && true)
+                {
+                    tracksListView.getItems().add(trackName);
+                    allTracksOL.add(trackName);
+                    Collections.sort(allTracksOL);
+                } // added that so stupid IntelliJ doesnt flag up duplicate code, when really, adding this as a function would make little difference given how many parameters it'd need to be passed
             }));
         });
         GridPane.setConstraints(searchField, 1, 0,90, 1);
@@ -289,7 +295,12 @@ public class Main extends Application
             List<File> fileList = fileChooser.showOpenMultipleDialog(editMusicStage);
             if (fileList != null)
             {
-                fileList.forEach(file -> songPathsToUpload.add(file.getAbsolutePath()));
+                fileList.forEach(file ->
+                {
+                    songPathsToUpload.add(file.getAbsolutePath());
+                    allTracksOL.add(file.getName().replace(".mp3", ""));
+                    Collections.sort(allTracksOL);
+                });
             }
         });
         GridPane.setConstraints(addButton, 95, 0);
@@ -304,6 +315,7 @@ public class Main extends Application
             {
                 songNamesToRemove.add(selectedItem);
                 allTracksOL.remove(selectedItem);
+                Collections.sort(allTracksOL);
             }
         });
         GridPane.setConstraints(removeButton, 0, 0);
@@ -514,7 +526,7 @@ public class Main extends Application
         return (ChannelSftp) channel;
     }
 
-    public void uploadFilesToServer(List<String> sourcePaths, String destDirectory)
+    private void uploadFilesToServer(List<String> sourcePaths, String destDirectory)
     {
         final ChannelSftp channelSftp = sftpToServer();
         sourcePaths.forEach(sourcePath ->
@@ -527,6 +539,23 @@ public class Main extends Application
                 System.out.println(destName);
                 channelSftp.put(sourcePath, destName, new UploadProgressMonitor());
             }
+            catch (SftpException ex) { throw new RuntimeException(ex); }
+        });
+        channelSftp.exit();
+    }
+
+    private void removeFilesFromServer(List<String> fileNames, String directory)
+    {
+        final ChannelSftp channelSftp = sftpToServer();
+        try
+        {
+            channelSftp.cd(directory);
+        }
+        catch (SftpException ex) { throw new RuntimeException(ex); }
+
+        fileNames.forEach(fileName ->
+        {
+            try { channelSftp.rm(fileName + ".mp3"); }
             catch (SftpException ex) { throw new RuntimeException(ex); }
         });
         channelSftp.exit();
