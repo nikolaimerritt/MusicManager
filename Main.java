@@ -245,7 +245,7 @@ public class Main extends Application
             saveAlert.showAndWait();
             if (saveAlert.getResult() == ButtonType.YES)
             {
-                uploadFilesToServer(songPathsToUpload, "var/www/html/AllTracks/");
+                uploadFilesToServer(songPathsToUpload, "/var/www/html/AllTracks/");
             }
             editMusicStage.hide();
         });
@@ -511,7 +511,7 @@ public class Main extends Application
                 try
                 {
                     System.out.println(sourcePath);
-                    String destName = "/var/www/html/AllTracks" + file.getName().replaceAll(" ", "_");
+                    String destName = destDirectory + file.getName().replaceAll(" ", "_");
                     System.out.println(destName);
                     channelSftp.put(sourcePath, destName, ChannelSftp.OVERWRITE);
                 }
