@@ -500,7 +500,7 @@ public class Main extends Application
         }
     }
 
-    private ChannelSftp sftpToServer()
+    private Session sessionToServer()
     {
         final JSch jSch = new JSch();
         final Session session;
@@ -515,20 +515,25 @@ public class Main extends Application
         config.put("StrictHostKeyChecking", "no");
         session.setConfig(config);
 
+        return session;
+    }
+
+    private void uploadFilesToServer(List<String> sourcePaths, String destDirectory)
+    {
+        final Session session = sessionToServer();
+        try { session.connect(); }
+        catch (JSchException ex) { throw new RuntimeException(ex); }
+
+        final Channel channel;
         try
         {
-            session.connect();
             channel = session.openChannel("sftp");
             channel.connect();
         }
         catch (JSchException ex) { throw new RuntimeException(ex); }
 
-        return (ChannelSftp) channel;
-    }
+        ChannelSftp sftp = (ChannelSftp) channel;
 
-    private void uploadFilesToServer(List<String> sourcePaths, String destDirectory)
-    {
-        final ChannelSftp channelSftp = sftpToServer();
         sourcePaths.forEach(sourcePath ->
         {
             File file = new File(sourcePath);
@@ -537,28 +542,45 @@ public class Main extends Application
                 System.out.println(sourcePath);
                 String destName = destDirectory + file.getName().replaceAll(" ", "_");
                 System.out.println(destName);
-                channelSftp.put(sourcePath, destName, new UploadProgressMonitor());
+                sftp.put(sourcePath, destName, new UploadProgressMonitor());
             }
             catch (SftpException ex) { throw new RuntimeException(ex); }
         });
-        channelSftp.exit();
+        sftp.exit();
+        channel.disconnect();
+        session.disconnect();
     }
 
     private void removeFilesFromServer(List<String> fileNames, String directory)
     {
-        final ChannelSftp channelSftp = sftpToServer();
+        final Session session = sessionToServer();
+        try { session.connect(); }
+        catch (JSchException ex) { throw new RuntimeException(ex); }
+
+        final Channel channel;
         try
         {
-            channelSftp.cd(directory);
+            channel = session.openChannel("sftp");
+            channel.connect();
+        }
+        catch (JSchException ex) { throw new RuntimeException(ex); }
+
+        ChannelSftp sftp = (ChannelSftp) channel;
+        try
+        {
+            sftp.cd(directory);
         }
         catch (SftpException ex) { throw new RuntimeException(ex); }
 
         fileNames.forEach(fileName ->
         {
-            try { channelSftp.rm(fileName + ".mp3"); }
+            try { sftp.rm(fileName + ".mp3"); }
             catch (SftpException ex) { throw new RuntimeException(ex); }
         });
-        channelSftp.exit();
+
+        sftp.exit();
+        channel.disconnect();
+        session.disconnect();
     }
 
     private static String fromURL(String deformat) { return deformat.replaceAll("%20", " "); }
