@@ -9,14 +9,14 @@ import javafx.geometry.Orientation;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.event.ActionEvent;
 import javafx.stage.WindowEvent;
 import javafx.scene.control.ButtonType;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
+
+import java.io.*;
 import java.net.URL;
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -234,10 +234,21 @@ public class Main extends Application
     {
         Stage editMusicStage = new Stage();
         GridPane editMusicGrid = new GridPane();
+        final List<String> songPathsToUpload = new ArrayList<>();
+        final List<String> songNamesToRemove = new ArrayList<>();
 
         editMusicStage.setTitle("Edit Music");
         editMusicStage.setResizable(true);
-        editMusicStage.setOnCloseRequest((WindowEvent event) -> editMusicStage.hide());
+        editMusicStage.setOnCloseRequest(event ->
+        {
+            final Alert saveAlert = new Alert(Alert.AlertType.CONFIRMATION, "save dis shit bruh????", ButtonType.YES, ButtonType.NO, ButtonType.CANCEL);
+            saveAlert.showAndWait();
+            if (saveAlert.getResult() == ButtonType.YES)
+            {
+                uploadFilesToServer(songPathsToUpload, "var/www/html/AllTracks/");
+            }
+            editMusicStage.hide();
+        });
         Scene editMusicScene = new Scene(editMusicGrid);
         editMusicScene.getStylesheets().add(Main.class.getResource("Main.css").toExternalForm());
         editMusicStage.setWidth(550);
@@ -272,11 +283,29 @@ public class Main extends Application
 
         // setting up add music button
         final Button addButton = new Button("+");
+        addButton.setOnAction(event ->
+        {
+            final FileChooser fileChooser = new FileChooser();
+            List<File> fileList = fileChooser.showOpenMultipleDialog(editMusicStage);
+            if (fileList != null)
+            {
+                fileList.forEach(file -> songPathsToUpload.add(file.getAbsolutePath()));
+            }
+        });
         GridPane.setConstraints(addButton, 95, 0);
         editMusicGrid.getChildren().add(addButton);
 
         // setting up remove music button
         final Button removeButton = new Button("--");
+        removeButton.setOnAction(event ->
+        {
+            String selectedItem = tracksListView.getSelectionModel().getSelectedItem();
+            if (selectedItem != null)
+            {
+                songNamesToRemove.add(selectedItem);
+                allTracksOL.remove(selectedItem);
+            }
+        });
         GridPane.setConstraints(removeButton, 0, 0);
         editMusicGrid.getChildren().add(removeButton);
 
@@ -459,6 +488,41 @@ public class Main extends Application
         }
     }
 
+    public void uploadFilesToServer(List<String> sourcePaths, String destDirectory)
+    {
+        final JSch jSch = new JSch();
+        final Session session;
+        final byte[] password = new byte[]{(byte) 0x65, (byte) 0x6e, (byte) 0x75, (byte) 0x6d, (byte) 0x61, (byte) 0x45, (byte) 0x6c, (byte) 0x69, (byte) 0x5f, (byte) 0x73 };
+        try
+        {
+            session = jSch.getSession("pi", "www.musicmanager.duckdns.org", 22);
+            session.setPassword(password);
+            Properties config = new Properties();
+            config.put("StrictHostKeyChecking", "no");
+            session.setConfig(config);
+            session.connect();
+
+            Channel channel = session.openChannel("sftp");
+            channel.connect();
+            ChannelSftp channelSftp = (ChannelSftp) channel;
+            sourcePaths.forEach(sourcePath ->
+            {
+                File file = new File(sourcePath);
+                try
+                {
+                    System.out.println(sourcePath);
+                    String destName = "/var/www/html/AllTracks" + file.getName().replaceAll(" ", "_");
+                    System.out.println(destName);
+                    channelSftp.put(sourcePath, destName, ChannelSftp.OVERWRITE);
+                }
+                catch (SftpException ex) { throw new RuntimeException(ex); }
+            });
+            channelSftp.exit();
+            session.disconnect();
+        }
+        catch (JSchException ex) { throw new RuntimeException(ex); }
+    }
+
     private static String fromURL(String deformat) { return deformat.replaceAll("%20", " "); }
 
     static <T> ArrayList<T> shiftLeft(ArrayList<T> arrayList)
@@ -520,7 +584,7 @@ public class Main extends Application
             Channel channel = session.openChannel("sftp");
             channel.connect();
             ChannelSftp channelSftp = (ChannelSftp) channel;
-            writer = new OutputStreamWriter(channelSftp.put(destination), "utf-8");
+            writer = new OutputStreamWriter(channelSftp.put(destination, ChannelSftp.OVERWRITE), "utf-8");
             writer.write(toWrite);
             writer.close();
             channelSftp.exit();
