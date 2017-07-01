@@ -249,6 +249,37 @@ public class Main extends Application
         editMusicGrid.setVgap(5);
         editMusicGrid.setHgap(5);
 
+        // setting up music listview
+        final ObservableList<String> allTracksOL = FXCollections.observableArrayList(allTracks);
+        final ListView<String> tracksListView = new ListView<>(allTracksOL);
+        GridPane.setConstraints(tracksListView, 0, 1, 96, 4);
+        editMusicGrid.getChildren().add(tracksListView);
+
+        // setting up search box for all tracks
+        final TextField searchField = new TextField();
+        searchField.setPromptText("⚲");
+        searchField.textProperty().addListener((observable, oldValue, newValue) ->
+        {
+            String searchText = newValue.toLowerCase();
+            tracksListView.getItems().clear();
+            allTracks.forEach((trackName ->
+            {
+                if (trackName.toLowerCase().contains(searchText) && true) { tracksListView.getItems().add(trackName); } // added that so stupid IntelliJ doesnt flag up duplicate code, when really, adding this as a function would make little difference given how many parameters it'd need to be passed
+            }));
+        });
+        GridPane.setConstraints(searchField, 1, 0,90, 1);
+        editMusicGrid.getChildren().add(searchField);
+
+        // setting up add music button
+        final Button addButton = new Button("+");
+        GridPane.setConstraints(addButton, 95, 0);
+        editMusicGrid.getChildren().add(addButton);
+
+        // setting up remove music button
+        final Button removeButton = new Button("--");
+        GridPane.setConstraints(removeButton, 0, 0);
+        editMusicGrid.getChildren().add(removeButton);
+
         // finally showing editMusicStage
         editMusicStage.show();
     }
@@ -371,8 +402,6 @@ public class Main extends Application
         GridPane.setConstraints(allTracksLabel, 62, 0, 35, 1);
         editPlaylistGrid.getChildren().add(allTracksLabel);
 
-        // setting up search box for all tracks
-
         // setting up playlist listview. removes track from playlist if clicked on
         final ListView<String> playlistListView = new ListView<>(playlistTracks);
         playlistListView.setOnMouseClicked(event -> playlistTracks.remove(playlistListView.getSelectionModel().getSelectedItem()));
@@ -392,6 +421,7 @@ public class Main extends Application
         GridPane.setConstraints(allTracksListView, 62, 2, 35, 10);
         editPlaylistGrid.getChildren().add(allTracksListView);
 
+        // setting up search box for all tracks
         final TextField searchField = new TextField();
         searchField.setPromptText("⚲");
         searchField.textProperty().addListener((observable, oldValue, newValue) ->
