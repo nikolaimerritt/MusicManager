@@ -124,8 +124,10 @@ public class Main extends Application
                     channel.connect();
                 }
                 catch (JSchException ex) { throw new RuntimeException(ex); }
+                System.out.println(newUsername);
                 if (!userExistsWithName(channel, newUsername))
                 {
+                    System.out.println("all good fam");
                     username = newUsername;
                     ChannelSftp sftp = (ChannelSftp) channel;
                     try
@@ -147,11 +149,12 @@ public class Main extends Application
                     launchMainScene();
                     loginStage.hide();
                 }
-            }
-            else
-            {
-                final Alert usernameExistsAlert = new Alert(Alert.AlertType.ERROR, "dat username already here fam", ButtonType.OK);
-                usernameExistsAlert.showAndWait();
+                else
+                {
+                    System.out.println("all good fam");
+                    final Alert usernameExistsAlert = new Alert(Alert.AlertType.ERROR, "dat username already here fam", ButtonType.OK);
+                    usernameExistsAlert.showAndWait();
+                }
             }
         });
         GridPane.setConstraints(newUserButton, 7, 1);
