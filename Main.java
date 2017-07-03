@@ -12,15 +12,11 @@ import javafx.scene.layout.GridPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.event.ActionEvent;
-import javafx.stage.WindowEvent;
 import javafx.scene.control.ButtonType;
-
 import java.io.*;
 import java.net.URL;
 import java.net.MalformedURLException;
 import java.util.*;
-import java.util.stream.Collectors;
-
 import javazoom.jl.decoder.JavaLayerException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -31,15 +27,141 @@ public class Main extends Application
 {
     private static QueuePlayer queuePlayer = new QueuePlayer();
     static final String rootURL = "http://musicmanager.duckdns.org/";
-    private static final HashMap<String, ArrayList<String>> playlistHashMap = getPlaylistHashMap();
+    private final String rootDir = "/var/www/html";
+    private static String username;
+    private static HashMap<String, ArrayList<String>> playlistHashMap;
     private static int viewMode = ViewMode.MUSIC_OVERVIEW;
-    private static final ArrayList<String> allTracks = getFileNamesAtSite(rootURL + "AllTracks/");
-    static ArrayList<String> trackQueue = allTracks;
+    private static ArrayList<String> allTracks;
+    static ArrayList<String> trackQueue;
     static final ProgressBar progressBar = new ProgressBar(0);
     static volatile boolean updateMainListView = false;
 
     @Override
-    public void start(Stage primaryStage)
+    public void start(Stage primaryStage) // launches login stage
+    {
+        GridPane loginGrid = new GridPane();
+
+        // setting up stage
+        Stage loginStage = new Stage();
+        loginStage.setTitle("LOG IN");
+        loginStage.setResizable(true);
+        loginStage.setOnCloseRequest(event -> closeAll());
+        Scene loginScene = new Scene(loginGrid, 300, 300);
+        loginScene.getStylesheets().add(Main.class.getResource("Main.css").toExternalForm());
+        loginStage.setWidth(400);
+        loginStage.setHeight(300);
+        loginStage.setScene(loginScene);
+
+        // setting up GridPane controller
+        loginGrid.setPadding(new Insets(10, 10, 10, 10));
+        loginGrid.setVgap(5);
+        loginGrid.setHgap(5);
+
+        // setting up username textfield
+        final TextField usernameTextField = new TextField();
+        usernameTextField.setPromptText("User Name: ");
+        GridPane.setConstraints(usernameTextField, 0, 0, 40, 1);
+        loginGrid.getChildren().add(usernameTextField);
+
+        // setting up cancel button
+        final Button cancelButton = new Button("CANCEL");
+        cancelButton.setOnAction(event -> closeAll());
+        GridPane.setConstraints(cancelButton, 0, 1);
+        loginGrid.getChildren().add(cancelButton);
+
+        // setting up OK button
+        final Button loginButton = new Button("OK");
+        loginButton.setOnAction(event ->
+        {
+            final Session session = sessionToServer();
+            try { session.connect(); }
+            catch (JSchException ex) { throw new RuntimeException(ex); }
+
+            final Channel channel;
+            try
+            {
+                channel = session.openChannel("sftp");
+                channel.connect();
+            }
+            catch (JSchException ex) { throw new RuntimeException(ex); }
+            username = usernameTextField.getText();
+
+            if (userExistsWithName(channel, username))
+            {
+                channel.disconnect();
+                session.disconnect();
+                allTracks = getFileNamesAtSite(rootURL + username + "/AllTracks");
+                trackQueue = allTracks;
+                playlistHashMap = getPlaylistHashMap();
+                launchMainScene();
+                loginStage.hide();
+                return;
+            }
+            else
+            {
+                final Alert badUsernameAlert = new Alert(Alert.AlertType.ERROR, "get that fake ass username outta here fam", ButtonType.OK);
+                badUsernameAlert.showAndWait();
+            }
+        });
+        GridPane.setConstraints(loginButton, 1, 1);
+        loginGrid.getChildren().add(loginButton);
+
+        // setting up make new user button
+        final Button newUserButton = new Button("SIGN UP");
+        newUserButton.setOnAction(event ->
+        {
+            String newUsername = usernameTextField.getText();
+            if (newUsername != null)
+            {
+                final Session session = sessionToServer();
+                try { session.connect(); }
+                catch (JSchException ex) { throw new RuntimeException(ex); }
+
+                final Channel channel;
+                try
+                {
+                    channel = session.openChannel("sftp");
+                    channel.connect();
+                }
+                catch (JSchException ex) { throw new RuntimeException(ex); }
+                if (!userExistsWithName(channel, newUsername))
+                {
+                    username = newUsername;
+                    ChannelSftp sftp = (ChannelSftp) channel;
+                    try
+                    {
+                        sftp.mkdir(rootDir + newUsername);
+                        sftp.cd(rootDir + newUsername);
+                        String[] dirsToMake = new String[]{"AllTracks", "Metadata", "Playlists"};
+                        for (String dir : dirsToMake) { sftp.mkdir(dir); }
+                        sftpWriter(rootDir + newUsername + "/Metadata/metadata.txt", "");      // making empty metadata file
+                        sftpWriter(rootDir + newUsername + "/Playlists/playlists.txt", "");    // making empty playlists file
+                    }
+                    catch (SftpException ex) { throw new RuntimeException(ex); }
+
+                    allTracks = getFileNamesAtSite(rootURL + newUsername + "/AllTracks");
+                    trackQueue = allTracks;
+                    playlistHashMap = getPlaylistHashMap();
+                    channel.disconnect();
+                    session.disconnect();
+                    launchMainScene();
+                    loginStage.hide();
+                }
+            }
+            else
+            {
+                final Alert usernameExistsAlert = new Alert(Alert.AlertType.ERROR, "dat username already here fam", ButtonType.OK);
+                usernameExistsAlert.showAndWait();
+            }
+        });
+        GridPane.setConstraints(newUserButton, 7, 1);
+        loginGrid.getChildren().add(newUserButton);
+
+        // finally showing stage
+        loginStage.show();
+    }
+
+    private void launchMainScene()
     {
         GridPane grid = new GridPane();
 
@@ -47,13 +169,7 @@ public class Main extends Application
         Stage stage = new Stage();
         stage.setTitle("Music Player");
         stage.setResizable(true);
-        stage.setOnCloseRequest((WindowEvent event) ->
-        {
-            try { Main.super.stop(); }
-            catch (Exception ex) { ex.printStackTrace(); }
-            Platform.exit();
-            System.exit(0);
-        });
+        stage.setOnCloseRequest(event -> closeAll());
         Scene scene = new Scene(grid, 300, 300);
         scene.getStylesheets().add(Main.class.getResource("Main.css").toExternalForm());
         stage.setWidth(585);
@@ -69,28 +185,31 @@ public class Main extends Application
         final Button playPauseBtn = new Button("▮▶");
         playPauseBtn.setOnAction((ActionEvent ae) ->
         {
-            switch (queuePlayer.playerStatus)
+            if (trackQueue != null && trackQueue.size() > 0)
             {
-                case PlayerStatus.PLAYING: // should be paused
-                    System.out.println("Pausing " + trackQueue.get(0) + "...");
-                    queuePlayer.pauseQueue();
-                    break;
+                switch (queuePlayer.playerStatus)
+                {
+                    case PlayerStatus.PLAYING: // should be paused
+                        System.out.println("Pausing " + trackQueue.get(0) + "...");
+                        queuePlayer.pauseQueue();
+                        break;
 
-                case PlayerStatus.PAUSED: // should be played
-                    System.out.println("Resuming " + trackQueue.get(0) + " from paused...");
-                    queuePlayer.resumeQueue();
-                    break;
+                    case PlayerStatus.PAUSED: // should be played
+                        System.out.println("Resuming " + trackQueue.get(0) + " from paused...");
+                        queuePlayer.resumeQueue();
+                        break;
 
-                default: // should be played from scratch
-                    System.out.println("Starting " + trackQueue.get(0) + "from scratch. Skipping 0%");
-                    queuePlayer.playNewQueue(0);
-                    break;
+                    default: // should be played from scratch
+                        System.out.println("Starting " + trackQueue.get(0) + "from scratch. Skipping 0%");
+                        queuePlayer.playNewQueue(0);
+                        break;
+                }
             }
         });
         GridPane.setConstraints(playPauseBtn, 0, 2, 1, 1);
         grid.getChildren().add(playPauseBtn);
 
-        // defining progress bar. shows % of progress. UPDATED AUTOMATICALLY IN MUSICPLAYER.JAVA
+        // defining progress bar. shows % of progress
         progressBar.setMaxWidth(Double.MAX_VALUE); // making it stretch all the way. this does not conflict with the shuffle button
         progressBar.setOnMouseClicked(event ->
         {
@@ -125,7 +244,6 @@ public class Main extends Application
                         trackQueue = playlistHashMap.get(selectedItem);
                         mainListView.setItems(FXCollections.observableArrayList(trackQueue));
                         queuePlayer.playNewQueue(0);
-                        //showEditSinglePlaylistScene(selectedItem);
                         break;
 
                     default: break;
@@ -215,13 +333,16 @@ public class Main extends Application
         final Button shuffleButton = new Button("\uD83D\uDD00"); // shuffle unicode character
         shuffleButton.setOnAction(event ->
         {
-            String currentTrack = trackQueue.get(0);
-            Collections.shuffle(trackQueue);
-            while (!trackQueue.get(0).equals(currentTrack)) // making current track be at front of shuffled queue
+            if (trackQueue != null && trackQueue.size() > 0)
             {
-                trackQueue = shiftLeft(trackQueue);
+                String currentTrack = trackQueue.get(0);
+                Collections.shuffle(trackQueue);
+                while (!trackQueue.get(0).equals(currentTrack)) // making current track be at front of shuffled queue
+                {
+                    trackQueue = shiftLeft(trackQueue);
+                }
+                mainListView.setItems(FXCollections.observableArrayList(trackQueue));
             }
-            mainListView.setItems(FXCollections.observableArrayList(trackQueue));
         });
         GridPane.setConstraints(shuffleButton, 99, 2);
         grid.getChildren().add(shuffleButton);
@@ -245,8 +366,8 @@ public class Main extends Application
             saveAlert.showAndWait();
             if (saveAlert.getResult() == ButtonType.YES)
             {
-                if (songPathsToUpload.size() != 0) { uploadFilesToServer(songPathsToUpload, "/var/www/html/AllTracks/"); }
-                if (songNamesToRemove.size() != 0) { removeFilesFromServer(songNamesToRemove, "/var/www/html/AllTracks/"); }
+                if (songPathsToUpload.size() != 0) { System.out.println(rootDir + "/" + username + "/AllTracks/"); uploadFilesToServer(songPathsToUpload, rootDir + "/" + username + "/AllTracks/"); }
+                if (songNamesToRemove.size() != 0) { removeFilesFromServer(songNamesToRemove, rootDir + "/" + username + "/AllTracks/"); }
             }
             editMusicStage.hide();
         });
@@ -481,6 +602,20 @@ public class Main extends Application
         editPlaylistStage.show();
     }
 
+    private boolean userExistsWithName(Channel channelToServer, String name)
+    {
+        ChannelSftp sftp = (ChannelSftp) channelToServer;
+        final Vector<ChannelSftp.LsEntry> usernameEntries;
+        try { usernameEntries = sftp.ls(rootDir); }
+        catch (SftpException ex) { throw new RuntimeException(ex); }
+
+        for (ChannelSftp.LsEntry lsEntry : usernameEntries)
+        {
+            if (lsEntry.getFilename().equals(name)) { return true; }
+        }
+        return false;
+    }
+
     private void saveAllPlaylists()
     {
         // saving all playlists to file, with updates. each line in format: playlistName:song1.mp3;song2.mp3;song3.mp3 ...
@@ -496,7 +631,7 @@ public class Main extends Application
                 writeInFile += ((i + 1 == currentPlaylistContents.size()) ? "\n" : ";");
             }
             final byte[] password = new byte[]{(byte) 0x65, (byte) 0x6e, (byte) 0x75, (byte) 0x6d, (byte) 0x61, (byte) 0x45, (byte) 0x6c, (byte) 0x69, (byte) 0x5f, (byte) 0x73};
-            sftpWriter("www.musicmanager.duckdns.org", "pi", password, "/var/www/html/Playlists/playlist.txt", writeInFile);
+            sftpWriter(rootDir + "/" + username + "/Playlists/playlists.txt", writeInFile);
         }
     }
 
@@ -612,7 +747,7 @@ public class Main extends Application
         final URL url;
         final Scanner scanner;
         HashMap<String, ArrayList<String>> playlistHashMap = new HashMap<>();
-        try { url = new URL("http://musicmanager.duckdns.org/Playlists/playlist.txt"); }
+        try { url = new URL(rootURL + username + "/Playlists/playlists.txt"); }
         catch (MalformedURLException ex) { throw new RuntimeException(ex); }
         try { scanner = new Scanner(url.openStream()); }
         catch (IOException ex) { throw new RuntimeException(ex); }
@@ -628,15 +763,15 @@ public class Main extends Application
         return playlistHashMap;
     }
 
-    private void sftpWriter(final String hostName, final String username, final byte[] password, final String destination, final String toWrite)
+    private void sftpWriter(final String destination, final String toWrite)
     {
         final JSch jSch = new JSch();
         final Session session;
         final Writer writer;
-        //final byte[] password = new byte[]{(byte) 0x65, (byte) 0x6e, (byte) 0x75, (byte) 0x6d, (byte) 0x61, (byte) 0x45, (byte) 0x6c, (byte) 0x69, (byte) 0x5f, (byte) 0x73 };
+        final byte[] password = new byte[]{(byte) 0x65, (byte) 0x6e, (byte) 0x75, (byte) 0x6d, (byte) 0x61, (byte) 0x45, (byte) 0x6c, (byte) 0x69, (byte) 0x5f, (byte) 0x73 };
         try
         {
-            session = jSch.getSession(username, hostName, 22);
+            session = jSch.getSession("pi", "www.musicmanager.duckdns.org", 22);
             session.setConfig("StrictHostKeyChecking", "no");
             session.setPassword(password);
             session.connect();
@@ -651,6 +786,14 @@ public class Main extends Application
             session.disconnect();
         }
         catch (JSchException | IOException | SftpException ex) { throw new RuntimeException(ex); }
+    }
+
+    private void closeAll()
+    {
+        try { Main.super.stop(); }
+        catch (Exception ex) { throw new RuntimeException(ex); }
+        Platform.exit();
+        System.exit(0);
     }
 
     public static void main(String[] args) throws InterruptedException
